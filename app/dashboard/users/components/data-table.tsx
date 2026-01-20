@@ -25,7 +25,8 @@ interface DataTableProps {
   users: User[];
 }
 
-export function DataTable({ users }: DataTableProps) {
+export function 
+DataTable({ users }: DataTableProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

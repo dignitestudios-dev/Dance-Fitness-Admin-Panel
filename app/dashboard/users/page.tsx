@@ -22,12 +22,14 @@ interface BackendUser {
 
 interface User {
   id: number;
-  uid: string; // 👈 ADD THIS
+  uid: string;
   name: string;
   email: string;
   avatar: string;
   status: "Active" | "Inactive";
   joinedDate: string;
+  address: string;
+  is_deactivate: boolean;
 }
 
 interface UsersApiResponse {
@@ -68,16 +70,17 @@ export default function UsersPage() {
       u.user_name ||
       "N/A";
 
-   return {
-  id: u.id,
-  uid: u.uid, // 👈 MAP UID
-  name: fullName,
-  email: u.email,
-  avatar: u.avatar ?? generateAvatar(fullName),
-  status: u.is_deactivate ? "Inactive" : "Active",
-  joinedDate: u.joined_date,
-};
-
+    return {
+      id: u.id,
+      uid: u.uid,
+      name: fullName,
+      email: u.email,
+      avatar: u.avatar ?? generateAvatar(fullName),
+      status: u.is_deactivate ? "Inactive" : "Active",
+      joinedDate: u.joined_date,
+      address: "",
+      is_deactivate: u.is_deactivate,
+    };
   };
 
   /* =============== API CALL =============== */
@@ -103,16 +106,6 @@ export default function UsersPage() {
 
     fetchUsers();
   }, []);
-
-  /* =============== HANDLERS =============== */
-
-  const handleDeleteUser = (id: number) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-  };
-
-  const handleEditUser = (user: User) => {
-    console.log("Edit user:", user);
-  };
 
   /* =============== UI =============== */
 
@@ -145,11 +138,7 @@ export default function UsersPage() {
 
       {/* ===== USERS TABLE ===== */}
       <div className="@container/main px-4 lg:px-6 mt-8 lg:mt-12">
-        <DataTable
-          users={users}
-          onDeleteUser={handleDeleteUser}
-          onEditUser={handleEditUser}
-        />
+        <DataTable users={users} />
       </div>
     </div>
   );
