@@ -29,26 +29,38 @@ import { Badge } from "@/components/ui/badge";
 interface Exercise {
   id: number;
   title: string;
-  categories: string;
+  categories: string[];
   level: string;
   tags: string | null;
   url: string;
   thumbnail: string | null;
 }
 
+interface PaginatedExercises {
+  current_page: number;
+  data: Exercise[];
+  last_page: number;
+  next_page_url: string | null;
+  prev_page_url: string | null;
+}
+
 export default function ExercisesPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginatedExercises>({
+    current_page: 1,
+    data: [],
+    last_page: 1,
+    next_page_url: null,
+    prev_page_url: null,
+  });
 
   const [playingId, setPlayingId] = useState<number | null>(null);
-
-  // Add exercise modal
   const [open, setOpen] = useState(false);
-
-  // Delete confirmation modal
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -60,24 +72,31 @@ export default function ExercisesPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
-  // Fetch exercises
+  // Fetch exercises with pagination
+  const fetchExercises = async (page: number = 1) => {
+    setLoading(true);
+    try {
+      const res = await API.get("/admin/exercises", { params: { page } });
+      setExercises(res.data.data);
+      setPagination({
+        current_page: res.data.current_page,
+        data: res.data.data,
+        last_page: res.data.last_page,
+        next_page_url: res.data.next_page_url,
+        prev_page_url: res.data.prev_page_url,
+      });
+    } catch (err) {
+      console.error("Error fetching exercises:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchExercises = async () => {
-      try {
-        const res = await API.get("/admin/exercises");
-        setExercises(res.data.data);
-      } catch (err) {
-        console.error("Error fetching exercises:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchExercises();
   }, []);
 
-  // Handlers
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setVideoFile(e.target.files[0]);
   };
@@ -123,8 +142,8 @@ export default function ExercisesPage() {
       setThumbnailFile(null);
       setVideoDuration("");
 
-      const refresh = await API.get("/admin/exercises");
-      setExercises(refresh.data.data);
+      // Refresh exercises at current page
+      fetchExercises(pagination.current_page);
     } catch (err) {
       console.error(err);
       alert("Failed to add exercise");
@@ -177,7 +196,14 @@ export default function ExercisesPage() {
 
             <form onSubmit={handleSubmit} className="space-y-3 mt-2">
               <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-              <Input placeholder="Categories (comma separated)" value={categories.join(", ")} onChange={(e) => setCategories(e.target.value.split(",").map((c) => c.trim()))} required />
+              <Input
+                placeholder="Categories (comma separated)"
+                value={categories.join(", ")}
+                onChange={(e) =>
+                  setCategories(e.target.value.split(",").map((c) => c.trim()))
+                }
+                required
+              />
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Level" />
@@ -190,9 +216,15 @@ export default function ExercisesPage() {
               </Select>
               <Textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
               <Input placeholder="Tags" value={tags} onChange={(e) => setTags(e.target.value)} />
-              <Input placeholder="Equipment" value={equipment.join(", ")} onChange={(e) => setEquipment(e.target.value.split(",").map((eq) => eq.trim()))} />
+              <Input
+                placeholder="Equipment"
+                value={equipment.join(", ")}
+                onChange={(e) =>
+                  setEquipment(e.target.value.split(",").map((eq) => eq.trim()))
+                }
+              />
               <Input type="file" accept="video/*" onChange={handleVideoChange} required />
-              <Input placeholder="Video Duration" value={videoDuration} onChange={(e) => setVideoDuration(e.target.value)} />
+              <Input placeholder="Video Duration - format (e.g., 00:00:00)" value={videoDuration} onChange={(e) => setVideoDuration(e.target.value)} />
               <Input type="file" accept="image/*" onChange={handleThumbnailChange} />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Adding..." : "Add Exercise"}
@@ -204,69 +236,101 @@ export default function ExercisesPage() {
 
       {/* Exercises Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-  {exercises.map((ex) => (
-    <Card key={ex.id} className="overflow-hidden">
-      <div className="relative">
-        {playingId === ex.id ? (
-          <video controls className="w-full h-40 object-cover">
-            <source
-              src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${ex.url}`}
-              type="video/mp4"
-            />
-          </video>
-        ) : (
-          <img
-            src={
-              ex.thumbnail
-                ? `https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${ex.thumbnail}`
-                : "https://placehold.co/400x200?text=No+Thumbnail"
-            }
-            alt={ex.title}
-            className="w-full h-40 object-contain cursor-pointer bg-muted"
-            onClick={() => setPlayingId(ex.id)}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src =
-                "https://placehold.co/400x200?text=No+Thumbnail";
-            }}
-          />
-        )}
+        {exercises.map((ex) => (
+          <Card key={ex.id} className="overflow-hidden">
+            <div className="relative">
+              {playingId === ex.id ? (
+                <video controls className="w-full h-40 object-cover">
+                  <source
+                    src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${ex.url}`}
+                    type="video/mp4"
+                  />
+                </video>
+              ) : (
+                <img
+                  src={
+                    ex.thumbnail
+                      ? `https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${ex.thumbnail}`
+                      : "https://placehold.co/400x200?text=No+Thumbnail"
+                  }
+                  alt={ex.title}
+                  className="w-full h-40 object-contain cursor-pointer bg-muted"
+                  onClick={() => setPlayingId(ex.id)}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      "https://placehold.co/400x200?text=No+Thumbnail";
+                  }}
+                />
+              )}
 
-        {/* Play button */}
-        {playingId !== ex.id && (
-          <button
-            onClick={() => setPlayingId(ex.id)}
-            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow"
-          >
-            <Play className="h-5 w-5 text-green-500" />
-          </button>
-        )}
-      </div>
+              {playingId !== ex.id && (
+                <button
+                  onClick={() => setPlayingId(ex.id)}
+                  className="absolute top-2 right-2 bg-white rounded-full p-1 shadow"
+                >
+                  <Play className="h-5 w-5 text-green-500" />
+                </button>
+              )}
+            </div>
 
-      <CardContent className="space-y-2">
-        <h2 className="font-semibold text-sm">{ex.title}</h2>
-
-        <div className="flex flex-wrap gap-1">
-          <Badge>{ex.categories}</Badge>
-          <Badge variant="secondary">{ex.level}</Badge>
-        </div>
-
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-full mt-2"
-          onClick={() => {
-            setDeletingId(ex.id);
-            setDeleteOpen(true);
-          }}
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Delete
-        </Button>
-      </CardContent>
-    </Card>
+            <CardContent className="space-y-2">
+              <h2 className="font-semibold text-sm">{ex.title}</h2>
+              <div className="flex flex-wrap gap-1">
+  {(Array.isArray(ex.categories) ? ex.categories : [ex.categories]).map((cat, idx) => (
+    <Badge key={idx}>{cat}</Badge>
   ))}
+  <Badge variant="secondary">{ex.level}</Badge>
 </div>
 
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => {
+                  setDeletingId(ex.id);
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Delete
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {pagination.last_page > 1 && (
+        <div className="flex justify-center mt-6 space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!pagination.prev_page_url}
+            onClick={() => fetchExercises(pagination.current_page - 1)}
+          >
+            &laquo; Previous
+          </Button>
+
+          {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
+            <Button
+              key={page}
+              size="sm"
+              variant={page === pagination.current_page ? "default" : "outline"}
+              onClick={() => fetchExercises(page)}
+            >
+              {page}
+            </Button>
+          ))}
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!pagination.next_page_url}
+            onClick={() => fetchExercises(pagination.current_page + 1)}
+          >
+            Next &raquo;
+          </Button>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

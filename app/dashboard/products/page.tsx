@@ -149,7 +149,10 @@ export default function ProductsPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+
+
       setAddOpen(false);
+    // window.location.reload();
 
       // Reset form
       setTitle("");
@@ -308,6 +311,44 @@ export default function ProductsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pagination */}
+{pagination.last_page > 1 && (
+  <div className="flex justify-center mt-6 space-x-2">
+    {/* Previous Page */}
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!pagination.prev_page_url}
+      onClick={() => fetchProducts(pagination.current_page - 1)}
+    >
+      &laquo; Previous
+    </Button>
+
+    {/* Page Numbers */}
+    {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
+      <Button
+        key={page}
+        size="sm"
+        variant={page === pagination.current_page ? "default" : "outline"}
+        onClick={() => fetchProducts(page)}
+      >
+        {page}
+      </Button>
+    ))}
+
+    {/* Next Page */}
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!pagination.next_page_url}
+      onClick={() => fetchProducts(pagination.current_page + 1)}
+    >
+      Next &raquo;
+    </Button>
+  </div>
+)}
+
     </div>
   );
 }
