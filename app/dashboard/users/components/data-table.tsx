@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { Eye } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +22,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 
+/* ================= TYPES ================= */
+
 interface User {
   id: number;
   uid: string;
@@ -35,26 +36,27 @@ interface User {
 
 interface DataTableProps {
   users: User[];
+  currentPage: number;
+  lastPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
-export function DataTable({ users }: DataTableProps) {
+/* ================= COMPONENT ================= */
+
+export function DataTable({
+  users,
+  currentPage,
+  lastPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: DataTableProps) {
   const router = useRouter();
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const totalPages = Math.ceil(users.length / pageSize);
-
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    return users.slice(start, end);
-  }, [users, currentPage, pageSize]);
-
-  const handlePageSizeChange = (value: string) => {
-    setPageSize(Number(value));
-    setCurrentPage(1); // reset page
-  };
+  // 🛡 Safety guard
+  const safePageSize = pageSize ?? 15;
 
   return (
     <div className="w-full space-y-4">
@@ -70,8 +72,8 @@ export function DataTable({ users }: DataTableProps) {
           </TableHeader>
 
           <TableBody>
-            {paginatedUsers.length ? (
-              paginatedUsers.map((user) => (
+            {users.length ? (
+              users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -123,39 +125,44 @@ export function DataTable({ users }: DataTableProps) {
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center gap-2">
+      {/* ===== Pagination Controls ===== */}
+      <div className="flex items-center justify-end py-4">
+        {/* <div className="flex items-center gap-2">
           <Label>Show</Label>
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+          <Select
+            value={safePageSize.toString()}
+            onValueChange={(v) => onPageSizeChange(Number(v))}
+          >
             <SelectTrigger className="w-20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="15">15</SelectItem>
               <SelectItem value="50">50</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="outline"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
+            onClick={() => onPageChange(currentPage - 1)}
           >
             Previous
           </Button>
+
           <span className="text-sm">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {lastPage}
           </span>
+
           <Button
             size="sm"
             variant="outline"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={currentPage === lastPage}
+            onClick={() => onPageChange(currentPage + 1)}
           >
             Next
           </Button>

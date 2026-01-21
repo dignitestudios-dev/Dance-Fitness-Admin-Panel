@@ -47,7 +47,11 @@ interface UsersApiResponse {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
   const [stats, setStats] = useState({
     total_users: 0,
     activate_users: 0,
@@ -88,9 +92,14 @@ export default function UsersPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await API.get<UsersApiResponse>("/admin/users");
+        setLoading(true);
+
+        const res = await API.get<UsersApiResponse>(
+          `/admin/users?page=${page}&per_page=${pageSize}`
+        );
 
         setUsers(res.data.users.data.map(mapUser));
+        setLastPage(res.data.users.last_page);
 
         setStats({
           total_users: res.data.total_users,
@@ -105,7 +114,7 @@ export default function UsersPage() {
     };
 
     fetchUsers();
-  }, []);
+  }, [page, pageSize]);
 
   /* =============== UI =============== */
 
@@ -115,19 +124,11 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ===== STAT CARDS (INLINE) ===== */}
+      {/* ===== STAT CARDS ===== */}
       <div className="@container/main px-4 lg:px-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="Total Users"
-            value={stats.total_users}
-            icon={Users}
-          />
-          <StatCard
-            title="Active Users"
-            value={stats.activate_users}
-            icon={UserCheck}
-          />
+          <StatCard title="Total Users" value={stats.total_users} icon={Users} />
+          <StatCard title="Active Users" value={stats.activate_users} icon={UserCheck} />
           <StatCard
             title="Deactivated Users"
             value={stats.deactivated_users}
@@ -138,7 +139,17 @@ export default function UsersPage() {
 
       {/* ===== USERS TABLE ===== */}
       <div className="@container/main px-4 lg:px-6 mt-8 lg:mt-12">
-        <DataTable users={users} />
+        <DataTable
+          users={users}
+          currentPage={page}
+          lastPage={lastPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
       </div>
     </div>
   );

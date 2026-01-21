@@ -205,15 +205,16 @@ export default function ExercisesPage() {
                 required
               />
               <Select value={level} onValueChange={setLevel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder="Select Level" />
+  </SelectTrigger>
+  <SelectContent className="w-full">
+    <SelectItem value="beginner">Beginner</SelectItem>
+    <SelectItem value="intermediate">Intermediate</SelectItem>
+    <SelectItem value="advanced">Advanced</SelectItem>
+  </SelectContent>
+</Select>
+
               <Textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
               <Input placeholder="Tags" value={tags} onChange={(e) => setTags(e.target.value)} />
               <Input
@@ -223,8 +224,12 @@ export default function ExercisesPage() {
                   setEquipment(e.target.value.split(",").map((eq) => eq.trim()))
                 }
               />
+                            <h1>Video</h1>
+
               <Input type="file" accept="video/*" onChange={handleVideoChange} required />
               <Input placeholder="Video Duration - format (e.g., 00:00:00)" value={videoDuration} onChange={(e) => setVideoDuration(e.target.value)} />
+                                          <h1>Thumbnail</h1>
+
               <Input type="file" accept="image/*" onChange={handleThumbnailChange} />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Adding..." : "Add Exercise"}

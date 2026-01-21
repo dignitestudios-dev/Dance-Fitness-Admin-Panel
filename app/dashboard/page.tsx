@@ -23,7 +23,7 @@ interface Metric {
 }
 
 interface SalesPoint {
-  time: string;
+  time: string; // ISO datetime string
   product_sales: number;
 }
 
@@ -35,13 +35,24 @@ interface DashboardResponse {
   sales_graph: SalesPoint[];
 }
 
-/* ================= HELPER FUNCTION ================= */
+/* ================= HELPERS ================= */
 
 const formatShortNumber = (value: number) => {
-  // Format numbers to be short (e.g., 1.2k, 98.7k, 1.2M)
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  return value.toString(); // Return value as string for numbers less than 1000
+  return value.toString();
+};
+
+const formatTime = (value: string) => {
+  const date = new Date(value);
+
+  // Safety fallback
+  if (isNaN(date.getTime())) return value;
+
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 /* ================= COMPONENT ================= */
@@ -73,20 +84,8 @@ export default function Dashboard() {
     return <p className="text-red-500">Failed to load dashboard</p>;
   }
 
-  // Generate wave-like data for sales (simulating a sine wave)
-  const generateWaveData = () => {
-    const waveData = [];
-    const numPoints = 24; // simulate 24 hours
-    for (let i = 0; i < numPoints; i++) {
-      waveData.push({
-        time: `${i}:00`,
-        product_sales: Math.sin(i * 0.5) * 100 + 200, // sine wave-based sales data
-      });
-    }
-    return waveData;
-  };
-
-  const salesData = generateWaveData(); // Generate wave-like sales data
+  // ✅ Use REAL API data
+  const salesData = data.sales_graph;
 
   return (
     <div className="flex flex-col gap-8">
@@ -104,41 +103,53 @@ export default function Dashboard() {
             {salesData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#D32C86" // Using the color D32C86 for the grid lines
-                  />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                  {/* X Axis — Time */}
                   <XAxis
                     dataKey="time"
+                    tickFormatter={formatTime}
                     tick={{ fontSize: 12, fill: "#6c757d" }}
-                    axisLine={{ stroke: "#D32C86" }} // Adjusting axis line color
-                  />
-                  <YAxis
-                    tickFormatter={formatShortNumber} // Format Y-axis ticks
-                    tick={{ fontSize: 12, fill: "#6c757d" }}
-                    axisLine={{ stroke: "#D32C86" }} // Adjusting axis line color
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#333",
-                      borderColor: "#333",
-                      color: "#fff",
+                    label={{
+                      value: "Time",
+                      position: "insideBottom",
+                      offset: -5,
+                      fill: "#6c757d",
+                      fontSize: 12,
                     }}
-                    labelStyle={{ color: "#fff" }}
-                    itemStyle={{ color: "#fff" }}
-                    formatter={(value: number) => [`$${formatShortNumber(value)}`, "Sales"]} // Format tooltip values
                   />
+
+                  {/* Y Axis — Product Sales */}
+                  <YAxis
+                    tickFormatter={formatShortNumber}
+                    tick={{ fontSize: 12, fill: "#6c757d" }}
+                    label={{
+                      value: "Product Sales",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: "#6c757d",
+                      fontSize: 12,
+                    }}
+                  />
+
+                  <Tooltip
+                    formatter={(value: number | undefined) => [
+                      value !== undefined ? formatShortNumber(value) : "N/A",
+                      "Product Sales",
+                    ]}
+                    labelFormatter={(label) =>
+                      `Time: ${formatTime(label)}`
+                    }
+                  />
+
                   <Area
                     type="monotone"
                     dataKey="product_sales"
-                    stroke="#D32C86" // Sales graph line color
-                    fill="#D32C86" // Sales graph fill color
+                    stroke="#D32C86"
+                    fill="#D32C86"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: "white", strokeWidth: 2, stroke: "#D32C86" }}
-                    activeDot={{ r: 6, stroke: "#D32C86", strokeWidth: 2 }}
-                    isAnimationActive={true}
-                    connectNulls
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

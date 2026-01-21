@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API } from "@/lib/api/axios";
 import { Eye, Loader2 } from "lucide-react";
-import Link from "next/link";
-
+import { toast } from "sonner";
 
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,7 +30,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /* ================= TYPES ================= */
 
@@ -88,6 +96,8 @@ export default function UserDetailsPage() {
 
   const [user, setUser] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -97,7 +107,8 @@ export default function UserDetailsPage() {
         const res = await API.get(`/admin/user-details/${uid}`);
         setUser(res.data);
       } catch (err) {
-        console.error("User details API error:", err);
+        console.error(err);
+        toast.error("Failed to load user details");
       } finally {
         setLoading(false);
       }
@@ -105,6 +116,36 @@ export default function UserDetailsPage() {
 
     fetchUserDetails();
   }, [uid]);
+
+  const handleDeactivate = async () => {
+    if (!user) return;
+
+    try {
+      setActionLoading(true);
+      await API.post(`/admin/deactivate-user/${user.user_id}`);
+      setUser({ ...user, is_deactivate: true });
+      toast.success("User deactivated successfully");
+    } catch {
+      toast.error("Failed to deactivate user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!user) return;
+
+    try {
+      setActionLoading(true);
+      await API.post(`/admin/reactive-user/${user.user_id}`);
+      setUser({ ...user, is_deactivate: false });
+      toast.success("User reactivated successfully");
+    } catch {
+      toast.error("Failed to reactivate user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -134,24 +175,82 @@ export default function UserDetailsPage() {
     <div className="space-y-6">
       {/* ===== USER HEADER ===== */}
       <Card>
-        <CardContent className="flex items-center gap-6 pt-6">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={user.avatar ?? undefined} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
+        <CardContent className="flex items-center justify-between gap-6 pt-6 flex-wrap">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={user.avatar ?? undefined} />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
 
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold">{fullName}</h1>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
-            <div className="flex items-center gap-2">
-              <Badge variant={user.is_deactivate ? "secondary" : "default"}>
-                {user.is_deactivate ? "Inactive" : "Active"}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                UID: {user.user_uid}
-              </span>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold">{fullName}</h1>
+              <p className="text-sm text-muted-foreground">{user.email}</p>
+
+              <div className="flex items-center gap-3">
+                <Badge variant={user.is_deactivate ? "secondary" : "default"}>
+                  {user.is_deactivate ? "Inactive" : "Active"}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  UID: {user.user_uid}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* ===== CONFIRMATION MODAL ===== */}
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              {user.is_deactivate ? (
+                <Button variant="outline">Reactivate</Button>
+              ) : (
+                <Button variant="destructive">Deactivate</Button>
+              )}
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {user.is_deactivate
+                    ? "Reactivate User?"
+                    : "Deactivate User?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {user.is_deactivate
+                    ? "This will restore the user's access to the platform."
+                    : "This will disable the user's access to the platform. You can reactivate the user later."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={actionLoading}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    if (user.is_deactivate) {
+                      await handleReactivate();
+                    } else {
+                      await handleDeactivate();
+                    }
+                    setConfirmOpen(false);
+                  }}
+                  className={
+                    user.is_deactivate
+                      ? ""
+                      : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  }
+                >
+                  {actionLoading
+                    ? "Processing..."
+                    : user.is_deactivate
+                    ? "Reactivate"
+                    : "Deactivate"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 
@@ -163,81 +262,82 @@ export default function UserDetailsPage() {
       </div>
 
       {/* ===== TABS ===== */}
+      <Tabs defaultValue="plans">
+        <TabsList>
+          <TabsTrigger value="plans">Training Plans</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+        </TabsList>
 
-<Tabs defaultValue="plans">
-  <TabsList>
-    <TabsTrigger value="plans">Training Plans</TabsTrigger>
-    <TabsTrigger value="sessions">Sessions</TabsTrigger>
-    <TabsTrigger value="orders">Orders</TabsTrigger>
-  </TabsList>
+        <TabsContent value="plans">
+          <DataTable
+            empty="No training plans found."
+            headers={["Title", "Exercises", "Level", "Action"]}
+            rows={user.training_plans.data.map((p) => [
+              p.title,
+              p.total_exercises,
+              p.level,
+              <button
+                key={p.id}
+                className="p-1 rounded hover:bg-muted/40"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/users/plans/${p.id}?userId=${user.user_uid}`
+                  )
+                }
+              >
+                <Eye className="h-5 w-5 text-primary" />
+              </button>,
+            ])}
+          />
+        </TabsContent>
 
-  {/* TRAINING PLANS */}
-  <TabsContent value="plans">
-    <DataTable
-      empty="No training plans found."
-      headers={["Title", "Exercises", "Level", "Action"]}
-      rows={user.training_plans.data.map((p) => [
-        p.title,
-        p.total_exercises,
-        p.level,
-        <button
-          key={p.id}
-          className="p-1 rounded hover:bg-muted/40 transition"
-          onClick={() =>
-            router.push(`/dashboard/users/plans/${p.id}?userId=${user.user_uid}`)
-          }
-        >
-          <Eye className="h-5 w-5 text-primary" />
-        </button>,
-      ])}
-    />
-  </TabsContent>
+        <TabsContent value="sessions">
+          <DataTable
+            empty="No sessions found."
+            headers={["Title", "Start Date", "End Date", "Action"]}
+            rows={user.sessions.data.map((s) => [
+              s.title,
+              s.start_date,
+              s.end_date,
+              <button
+                key={s.id}
+                className="p-1 rounded hover:bg-muted/40"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/users/sessions/${s.id}?userId=${user.user_uid}`
+                  )
+                }
+              >
+                <Eye className="h-5 w-5 text-primary" />
+              </button>,
+            ])}
+          />
+        </TabsContent>
 
-  {/* SESSIONS */}
-  <TabsContent value="sessions">
-    <DataTable
-      empty="No sessions found."
-      headers={["Title", "Start Date", "End Date", "Action"]}
-      rows={user.sessions.data.map((s) => [
-        s.title,
-        s.start_date,
-        s.end_date,
-        <button
-          key={s.id}
-          className="p-1 rounded hover:bg-muted/40 transition"
-          onClick={() =>
-            router.push(`/dashboard/users/sessions/${s.id}?userId=${user.user_uid}`)
-          }
-        >
-          <Eye className="h-5 w-5 text-primary" />
-        </button>,
-      ])}
-    />
-  </TabsContent>
-
-  {/* ORDERS */}
-  <TabsContent value="orders">
-    <DataTable
-      empty="No orders found."
-      headers={["Items", "Status", "Amount", "Action"]}
-      rows={user.orders.data.map((o) => [
-        o.total_items,
-        o.status,
-        `$${o.total_amount}`,
-        <button
-          key={o.id}
-          className="p-1 rounded hover:bg-muted/40 transition"
-          onClick={() =>
-            router.push(`/dashboard/users/orders/${o.id}?userId=${user.user_uid}`)
-          }
-        >
-          <Eye className="h-5 w-5 text-primary" />
-        </button>,
-      ])}
-    />
-  </TabsContent>
-</Tabs>
-
+        <TabsContent value="orders">
+          <DataTable
+            empty="No orders found."
+            headers={["Items", "Status", "Amount", "Action"]}
+            rows={user.orders.data.map((o) => [
+              o.total_items,
+              o.status,
+              `$${o.total_amount}`,
+              <button
+                key={o.id}
+                className="p-1 rounded hover:bg-muted/40"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/users/orders/${o.id}?userId=${user.user_uid}`
+                  )
+                }
+              >
+                <Eye className="h-5 w-5 text-primary" />
+              </button>,
+            ])}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
