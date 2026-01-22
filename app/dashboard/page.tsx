@@ -155,7 +155,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             ) : (
               <p className="text-muted-foreground text-sm">
-                No sales data available
+                No sales data available 
               </p>
             )}
           </CardContent>

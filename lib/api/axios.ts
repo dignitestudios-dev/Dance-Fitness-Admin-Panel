@@ -13,7 +13,6 @@ const formDataHeaders = {
 // Create an Axios instance
 export const API = axios.create({
   baseURL: baseURL,
-  timeout: 10000, // Set a timeout (optional)
   headers: headers,
 });
 

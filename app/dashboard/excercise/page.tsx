@@ -6,6 +6,8 @@ import { Loader2, Plus, Play, Trash2 } from "lucide-react";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -73,6 +75,23 @@ export default function ExercisesPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState("");
 
+  // Helper to format seconds to HH:MM:SS
+  const formatDuration = (seconds: number) => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  // If hours is 0, omit it
+  if (hrs === 0) {
+    return [mins, secs]
+      .map((v) => v.toString().padStart(2, "0"))
+      .join(":");
+  }
+
+  return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
+};
+
+
   // Fetch exercises with pagination
   const fetchExercises = async (page: number = 1) => {
     setLoading(true);
@@ -97,8 +116,24 @@ export default function ExercisesPage() {
     fetchExercises();
   }, []);
 
+  // Handle video selection and extract duration
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setVideoFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setVideoFile(file);
+
+    const video = document.createElement("video");
+    video.preload = "metadata";
+
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(video.src);
+      const durationInSeconds = video.duration;
+      const formattedDuration = formatDuration(durationInSeconds);
+      setVideoDuration(formattedDuration);
+    };
+
+    video.src = URL.createObjectURL(file);
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +177,6 @@ export default function ExercisesPage() {
       setThumbnailFile(null);
       setVideoDuration("");
 
-      // Refresh exercises at current page
       fetchExercises(pagination.current_page);
     } catch (err) {
       console.error(err);
@@ -195,42 +229,75 @@ export default function ExercisesPage() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-3 mt-2">
-              <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <Input
+                placeholder="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
               <Input
                 placeholder="Categories (comma separated)"
                 value={categories.join(", ")}
                 onChange={(e) =>
-                  setCategories(e.target.value.split(",").map((c) => c.trim()))
+                  setCategories(
+                    e.target.value.split(",").map((c) => c.trim())
+                  )
                 }
                 required
               />
-              <Select value={level} onValueChange={setLevel}>
-  <SelectTrigger className="w-full">
-    <SelectValue placeholder="Select Level" />
-  </SelectTrigger>
-  <SelectContent className="w-full">
-    <SelectItem value="beginner">Beginner</SelectItem>
-    <SelectItem value="intermediate">Intermediate</SelectItem>
-    <SelectItem value="advanced">Advanced</SelectItem>
-  </SelectContent>
-</Select>
 
-              <Textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-              <Input placeholder="Tags" value={tags} onChange={(e) => setTags(e.target.value)} />
+              <Select value={level} onValueChange={setLevel}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Level" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Textarea
+                placeholder="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <Input
+                placeholder="Tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
               <Input
                 placeholder="Equipment"
                 value={equipment.join(", ")}
                 onChange={(e) =>
-                  setEquipment(e.target.value.split(",").map((eq) => eq.trim()))
+                  setEquipment(
+                    e.target.value.split(",").map((eq) => eq.trim())
+                  )
                 }
               />
-                            <h1>Video</h1>
 
-              <Input type="file" accept="video/*" onChange={handleVideoChange} required />
-              <Input placeholder="Video Duration - format (e.g., 00:00:00)" value={videoDuration} onChange={(e) => setVideoDuration(e.target.value)} />
-                                          <h1>Thumbnail</h1>
+              <h1>Video</h1>
+              <Input
+                type="file"
+                accept="video/*"
+                onChange={handleVideoChange}
+                required
+              />
+              {videoDuration && (
+                <Input
+                  value={videoDuration}
+                  disabled
+                  placeholder="Video duration will be detected automatically"
+                />
+              )}
 
-              <Input type="file" accept="image/*" onChange={handleThumbnailChange} />
+              <h1>Thumbnail</h1>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleThumbnailChange}
+              />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Adding..." : "Add Exercise"}
               </Button>
@@ -281,11 +348,14 @@ export default function ExercisesPage() {
             <CardContent className="space-y-2">
               <h2 className="font-semibold text-sm">{ex.title}</h2>
               <div className="flex flex-wrap gap-1">
-  {(Array.isArray(ex.categories) ? ex.categories : [ex.categories]).map((cat, idx) => (
-    <Badge key={idx}>{cat}</Badge>
-  ))}
-  <Badge variant="secondary">{ex.level}</Badge>
-</div>
+                {(Array.isArray(ex.categories)
+                  ? ex.categories
+                  : [ex.categories]
+                ).map((cat, idx) => (
+                  <Badge key={idx}>{cat}</Badge>
+                ))}
+                <Badge variant="secondary">{ex.level}</Badge>
+              </div>
 
               <Button
                 variant="destructive"
@@ -315,16 +385,20 @@ export default function ExercisesPage() {
             &laquo; Previous
           </Button>
 
-          {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              size="sm"
-              variant={page === pagination.current_page ? "default" : "outline"}
-              onClick={() => fetchExercises(page)}
-            >
-              {page}
-            </Button>
-          ))}
+          {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(
+            (page) => (
+              <Button
+                key={page}
+                size="sm"
+                variant={
+                  page === pagination.current_page ? "default" : "outline"
+                }
+                onClick={() => fetchExercises(page)}
+              >
+                {page}
+              </Button>
+            )
+          )}
 
           <Button
             size="sm"
@@ -345,14 +419,23 @@ export default function ExercisesPage() {
           </DialogHeader>
 
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this exercise? This action cannot be undone.
+            Are you sure you want to delete this exercise? This action cannot
+            be undone.
           </p>
 
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteExercise} disabled={deleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteExercise}
+              disabled={deleting}
+            >
               {deleting ? "Deleting..." : "Delete"}
             </Button>
           </div>
