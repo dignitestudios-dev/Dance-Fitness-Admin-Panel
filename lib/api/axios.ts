@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const baseURL = "http://3.15.190.145/api"; // Replace with your actual base URL
+export const baseURL = "https://api.dancer-fitness.com/api"; // Replace with your actual base URL 
+// https://api.dancer-fitness.com/api
 
 const headers = {
   "Content-Type": "application/json",
