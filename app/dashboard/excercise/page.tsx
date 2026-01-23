@@ -36,7 +36,7 @@ interface Exercise {
   tags: string | null;
   url: string;
   thumbnail: string | null;
-  type: "ondemand" | "regular"; // Added type to Exercise interface
+  type: "ondemand" | "regular";
 }
 
 interface PaginatedExercises {
@@ -48,9 +48,19 @@ interface PaginatedExercises {
 }
 
 export default function ExercisesPage() {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [regularExercises, setRegularExercises] = useState<Exercise[]>([]);
+  const [ondemandExercises, setOndemandExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginatedExercises>({
+
+  const [paginationRegular, setPaginationRegular] = useState<PaginatedExercises>({
+    current_page: 1,
+    data: [],
+    last_page: 1,
+    next_page_url: null,
+    prev_page_url: null,
+  });
+
+  const [paginationOndemand, setPaginationOndemand] = useState<PaginatedExercises>({
     current_page: 1,
     data: [],
     last_page: 1,
@@ -65,7 +75,6 @@ export default function ExercisesPage() {
   const [deleting, setDeleting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
   const [title, setTitle] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [level, setLevel] = useState("");
@@ -75,9 +84,10 @@ export default function ExercisesPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState("");
-  const [type, setType] = useState<"on_demand" | "regular" | "">(""); // Added type
+  const [type, setType] = useState<"on_demand" | "regular" | "">("");
 
-  // Helper to format seconds to HH:MM:SS
+  const [filter, setFilter] = useState<"all" | "ondemand" | "regular">("all");  // New filter state
+
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -92,19 +102,31 @@ export default function ExercisesPage() {
     return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
   };
 
-  // Fetch exercises with pagination
   const fetchExercises = async (page: number = 1) => {
     setLoading(true);
     try {
       const res = await API.get("/admin/exercises", { params: { page } });
-      setExercises(res.data.data);
-      setPagination({
-        current_page: res.data.current_page,
-        data: res.data.data,
-        last_page: res.data.last_page,
-        next_page_url: res.data.next_page_url,
-        prev_page_url: res.data.prev_page_url,
+
+      // Handle regular exercises
+      setRegularExercises(res.data.regular.data);
+      setPaginationRegular({
+        current_page: res.data.regular.current_page,
+        data: res.data.regular.data,
+        last_page: res.data.regular.last_page,
+        next_page_url: res.data.regular.next_page_url,
+        prev_page_url: res.data.regular.prev_page_url,
       });
+
+      // Handle ondemand exercises
+      setOndemandExercises(res.data.ondemand.data);
+      setPaginationOndemand({
+        current_page: res.data.ondemand.current_page,
+        data: res.data.ondemand.data,
+        last_page: res.data.ondemand.last_page,
+        next_page_url: res.data.ondemand.next_page_url,
+        prev_page_url: res.data.ondemand.prev_page_url,
+      });
+
     } catch (err) {
       console.error("Error fetching exercises:", err);
     } finally {
@@ -116,7 +138,6 @@ export default function ExercisesPage() {
     fetchExercises();
   }, []);
 
-  // Handle video selection and extract duration
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -164,7 +185,7 @@ export default function ExercisesPage() {
       formData.append("video", videoFile);
       formData.append("video_duration", videoDuration);
       if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
-      formData.append("type", type); // Added type to form data
+      formData.append("type", type);
 
       await API.post("/admin/add-exercise", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -182,9 +203,9 @@ export default function ExercisesPage() {
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoDuration("");
-      setType(""); // Reset type after submit
+      setType("");
 
-      fetchExercises(pagination.current_page);
+      fetchExercises(paginationRegular.current_page);
     } catch (err) {
       console.error(err);
       alert("Failed to add exercise");
@@ -199,7 +220,8 @@ export default function ExercisesPage() {
     setDeleting(true);
     try {
       await API.delete(`/admin/exercises/${deletingId}`);
-      setExercises((prev) => prev.filter((ex) => ex.id !== deletingId));
+      setRegularExercises((prev) => prev.filter((ex) => ex.id !== deletingId));
+      setOndemandExercises((prev) => prev.filter((ex) => ex.id !== deletingId));
       setDeleteOpen(false);
       setDeletingId(null);
     } catch (err) {
@@ -207,6 +229,18 @@ export default function ExercisesPage() {
       alert("Failed to delete exercise");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const exercisesToShow = () => {
+    switch (filter) {
+      case "ondemand":
+        return ondemandExercises;
+      case "regular":
+        return regularExercises;
+      case "all":
+      default:
+        return [...regularExercises, ...ondemandExercises];
     }
   };
 
@@ -252,7 +286,6 @@ export default function ExercisesPage() {
                 }
                 required
               />
-
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Level" />
@@ -323,9 +356,36 @@ export default function ExercisesPage() {
         </Dialog>
       </div>
 
+      {/* Filter Controls */}
+      {/* Filter Controls */}
+<div className="flex gap-4 mb-6">
+  <Button
+    variant="outline"
+    onClick={() => setFilter("all")}
+    className={filter === "all" ? "bg-[#D32C86] text-white" : "bg-transparent text-black"}
+  >
+    All Exercises
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() => setFilter("regular")}
+    className={filter === "regular" ? "bg-[#D32C86] text-white" : "bg-transparent text-black"}
+  >
+    Regular Exercises
+  </Button>
+  <Button
+    variant="outline"
+    onClick={() => setFilter("ondemand")}
+    className={filter === "ondemand" ? "bg-[#D32C86] text-white" : "bg-transparent text-black"}
+  >
+    On Demand Exercises
+  </Button>
+</div>
+
+
       {/* Exercises Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {exercises.map((ex) => (
+        {exercisesToShow().map((ex) => (
           <Card key={ex.id} className="overflow-hidden">
             <div className="relative">
               {playingId === ex.id ? (
@@ -369,10 +429,10 @@ export default function ExercisesPage() {
                   ? ex.categories
                   : [ex.categories]
                 ).map((cat, idx) => (
-                  <Badge key={idx}>{cat}</Badge>
+                  <Badge key={idx}>#{cat}</Badge>
                 ))}
                 <Badge variant="secondary">{ex.level}</Badge>
-                <Badge variant="outline">{ex.type}</Badge> 
+                {/* <Badge variant="outline">{ex.type}</Badge>  */}
               </div>
 
               <Button
@@ -391,26 +451,24 @@ export default function ExercisesPage() {
         ))}
       </div>
 
-      {/* Pagination */}
-      {pagination.last_page > 1 && (
+      {/* Regular Pagination */}
+      {paginationRegular.last_page > 1 && (
         <div className="flex justify-center mt-6 space-x-2">
           <Button
             size="sm"
             variant="outline"
-            disabled={!pagination.prev_page_url}
-            onClick={() => fetchExercises(pagination.current_page - 1)}
+            disabled={!paginationRegular.prev_page_url}
+            onClick={() => fetchExercises(paginationRegular.current_page - 1)}
           >
             &laquo; Previous
           </Button>
 
-          {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(
+          {Array.from({ length: paginationRegular.last_page }, (_, i) => i + 1).map(
             (page) => (
               <Button
                 key={page}
                 size="sm"
-                variant={
-                  page === pagination.current_page ? "default" : "outline"
-                }
+                variant={page === paginationRegular.current_page ? "default" : "outline"}
                 onClick={() => fetchExercises(page)}
               >
                 {page}
@@ -421,8 +479,44 @@ export default function ExercisesPage() {
           <Button
             size="sm"
             variant="outline"
-            disabled={!pagination.next_page_url}
-            onClick={() => fetchExercises(pagination.current_page + 1)}
+            disabled={!paginationRegular.next_page_url}
+            onClick={() => fetchExercises(paginationRegular.current_page + 1)}
+          >
+            Next &raquo;
+          </Button>
+        </div>
+      )}
+
+      {/* Ondemand Pagination */}
+      {paginationOndemand.last_page > 1 && (
+        <div className="flex justify-center mt-6 space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!paginationOndemand.prev_page_url}
+            onClick={() => fetchExercises(paginationOndemand.current_page - 1)}
+          >
+            &laquo; Previous
+          </Button>
+
+          {Array.from({ length: paginationOndemand.last_page }, (_, i) => i + 1).map(
+            (page) => (
+              <Button
+                key={page}
+                size="sm"
+                variant={page === paginationOndemand.current_page ? "default" : "outline"}
+                onClick={() => fetchExercises(page)}
+              >
+                {page}
+              </Button>
+            )
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!paginationOndemand.next_page_url}
+            onClick={() => fetchExercises(paginationOndemand.current_page + 1)}
           >
             Next &raquo;
           </Button>

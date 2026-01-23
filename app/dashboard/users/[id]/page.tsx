@@ -272,13 +272,13 @@ export default function UserDetailsPage() {
         </TabsList>
 
         <TabsContent value="plans">
-          <DataTable
+          <DataTable 
             empty="No training plans found."
             headers={["Title", "Exercises", "Level", "Action"]}
             rows={user.training_plans.data.map((p) => [
               p.title,
               p.total_exercises,
-              p.level,
+    p.level.charAt(0).toUpperCase() + p.level.slice(1),
               <button
                 key={p.id}
                 className="p-1 rounded hover:bg-muted/40"

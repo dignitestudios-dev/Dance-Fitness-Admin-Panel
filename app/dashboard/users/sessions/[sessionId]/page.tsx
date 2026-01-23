@@ -112,7 +112,7 @@ export default function SessionDetailsPage() {
             </Info>
             <Info label="Time">{session.time}</Info>
             <Info label="Active Days">
-              {session.days.join(", ")}
+              <p className="capitalize">{session.days.join(", ")}</p>
             </Info>
           </div>
         </CardContent>
