@@ -269,7 +269,7 @@ export default function ExercisesPage() {
                   <SelectValue placeholder="Select Exercise Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="on_demand">On Demand</SelectItem>
+                  <SelectItem value="ondemand">On Demand</SelectItem>
                   <SelectItem value="regular">Regular</SelectItem>
                 </SelectContent>
               </Select>
