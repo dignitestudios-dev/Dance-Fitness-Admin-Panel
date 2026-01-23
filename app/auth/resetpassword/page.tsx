@@ -107,7 +107,7 @@ const ResetPassword = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
-              {showPassword ? <EyeOff /> : <Eye />}
+              {showPassword ? <Eye /> :  <EyeOff /> }
             </button>
           </div>
         </div>
@@ -129,7 +129,7 @@ const ResetPassword = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
-              {showPassword ? <EyeOff /> : <Eye />}
+              {showPassword ? <Eye />  : <EyeOff />}
             </button>
           </div>
         </div>

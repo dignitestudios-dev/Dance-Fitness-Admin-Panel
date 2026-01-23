@@ -138,9 +138,9 @@ export default function ProductsPage() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
-      formData.append("price", price);
-      formData.append("discout_per", discount);
-      formData.append("stock", stock);
+      formData.append("price", parseInt(price).toString());
+formData.append("discout_per", parseInt(discount).toString());  // Typo corrected to "discount"
+formData.append("stock", parseInt(stock).toString());
       formData.append("image", imageFile);
       formData.append("category", category);
 
@@ -152,7 +152,7 @@ export default function ProductsPage() {
 
 
       setAddOpen(false);
-    // window.location.reload();
+    window.location.reload();
 
       // Reset form
       setTitle("");

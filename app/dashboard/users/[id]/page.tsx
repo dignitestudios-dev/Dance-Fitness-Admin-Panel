@@ -175,11 +175,13 @@ export default function UserDetailsPage() {
     <div className="space-y-6">
       {/* ===== USER HEADER ===== */}
       <Card>
-        <CardContent className="flex items-center justify-between gap-6 pt-6 flex-wrap">
+        <CardContent className="flex items-center justify-between gap-6  flex-wrap">
           <div className="flex items-center gap-6">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={user.avatar ?? undefined} />
-              <AvatarFallback>{initials}</AvatarFallback>
+            <Avatar className="h-20 w-20">
+ <AvatarImage className="object-cover"
+                          src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${user.avatar}`}
+                        />
+                       <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
             <div className="space-y-1">
@@ -190,9 +192,9 @@ export default function UserDetailsPage() {
                 <Badge variant={user.is_deactivate ? "secondary" : "default"}>
                   {user.is_deactivate ? "Inactive" : "Active"}
                 </Badge>
-                <span className="text-sm text-muted-foreground">
+                {/* <span className="text-sm text-muted-foreground">
                   UID: {user.user_uid}
-                </span>
+                </span> */}
               </div>
             </div>
           </div>

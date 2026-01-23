@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +65,7 @@ export function DataTable({
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Address</TableHead>
+              {/* <TableHead>Address</TableHead> */}
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -78,8 +78,12 @@ export function DataTable({
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
+                        <AvatarImage className="object-cover"
+                          src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${user.avatar}`}
+                          alt={user.name}
+                        />
                         <AvatarFallback className="text-xs font-medium">
-                          {user.avatar}
+                          {user.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
@@ -91,9 +95,9 @@ export function DataTable({
                     </div>
                   </TableCell>
 
-                  <TableCell>
+                  {/* <TableCell>
                     {user.address || "Not Provided"}
-                  </TableCell>
+                  </TableCell> */}
 
                   <TableCell>
                     <Badge variant="secondary">

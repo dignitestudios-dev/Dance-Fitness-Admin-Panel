@@ -47,17 +47,32 @@ export default function NotificationsPage() {
     prev_page_url: null,
   });
 
-  // Create modal
+  // Modal
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
+  // Form
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
 
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; // auto-detect
+  // Date helpers
+  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+  const minTime = date === today ? currentTime : undefined;
+
+  // Reset form on modal close
+  useEffect(() => {
+    if (!open) {
+      setTitle("");
+      setBody("");
+      setDate("");
+      setTime("");
+      setSubmitting(false);
+    }
+  }, [open]);
 
   // Fetch notifications
   const fetchNotifications = async (page: number = 1) => {
@@ -80,7 +95,7 @@ export default function NotificationsPage() {
     }
   };
 
-  // Create notification
+  // Create notification (UTC-safe)
   const handleCreateNotification = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -89,27 +104,25 @@ export default function NotificationsPage() {
       return;
     }
 
-    // Format date and time
-    const formattedDate = date.split("-").reverse().join("-"); // YYYY-MM-DD -> DD-MM-YYYY
-    const formattedTime = time.length === 5 ? `${time}:00` : time; // append seconds if missing
+    // Combine local date + time
+    const localDateTime = new Date(`${date}T${time}:00`);
 
-    // Validate datetime is in the future
-    const [year, month, day] = date.split("-"); // YYYY-MM-DD
-    const [hours, minutes, seconds] = formattedTime.split(":");
-
-    const notificationDate = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds)
-    );
-
-    if (notificationDate <= new Date()) {
-      alert("Notification date and time must be in the future!");
+    // Frontend validation
+    if (localDateTime < new Date()) {
+      alert("Notification date and time cannot be in the past!");
       return;
     }
+
+    // Convert to UTC
+    const utcYear = localDateTime.getUTCFullYear();
+    const utcMonth = String(localDateTime.getUTCMonth() + 1).padStart(2, "0");
+    const utcDay = String(localDateTime.getUTCDate()).padStart(2, "0");
+    const utcHours = String(localDateTime.getUTCHours()).padStart(2, "0");
+    const utcMinutes = String(localDateTime.getUTCMinutes()).padStart(2, "0");
+    const utcSeconds = String(localDateTime.getUTCSeconds()).padStart(2, "0");
+
+    const formattedDate = `${utcDay}-${utcMonth}-${utcYear}`; // DD-MM-YYYY
+    const formattedTime = `${utcHours}:${utcMinutes}:${utcSeconds}`; // HH:mm:ss
 
     setSubmitting(true);
 
@@ -119,15 +132,10 @@ export default function NotificationsPage() {
         body,
         date: formattedDate,
         time: formattedTime,
-        timezone,
+        timezone: "UTC",
       });
 
       setOpen(false);
-      setTitle("");
-      setBody("");
-      setDate("");
-      setTime("");
-
       fetchNotifications(pagination.current_page);
     } catch (err) {
       console.error("Failed to create notification:", err);
@@ -186,6 +194,7 @@ export default function NotificationsPage() {
               <Input
                 type="date"
                 value={date}
+                min={today}
                 onChange={(e) => setDate(e.target.value)}
                 required
               />
@@ -193,6 +202,7 @@ export default function NotificationsPage() {
               <Input
                 type="time"
                 value={time}
+                min={minTime}
                 onChange={(e) => setTime(e.target.value)}
                 required
               />

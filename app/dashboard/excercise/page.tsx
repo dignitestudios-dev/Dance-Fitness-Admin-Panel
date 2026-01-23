@@ -36,6 +36,7 @@ interface Exercise {
   tags: string | null;
   url: string;
   thumbnail: string | null;
+  type: "on_demand" | "regular"; // Added type to Exercise interface
 }
 
 interface PaginatedExercises {
@@ -74,23 +75,22 @@ export default function ExercisesPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState("");
+  const [type, setType] = useState<"on_demand" | "regular" | "">(""); // Added type
 
   // Helper to format seconds to HH:MM:SS
   const formatDuration = (seconds: number) => {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
 
-  // If hours is 0, omit it
-  if (hrs === 0) {
-    return [mins, secs]
-      .map((v) => v.toString().padStart(2, "0"))
-      .join(":");
-  }
+    if (hrs === 0) {
+      return [mins, secs]
+        .map((v) => v.toString().padStart(2, "0"))
+        .join(":");
+    }
 
-  return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
-};
-
+    return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
+  };
 
   // Fetch exercises with pagination
   const fetchExercises = async (page: number = 1) => {
@@ -147,6 +147,11 @@ export default function ExercisesPage() {
       return;
     }
 
+    if (!type) {
+      alert("Please select exercise type");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -159,6 +164,7 @@ export default function ExercisesPage() {
       formData.append("video", videoFile);
       formData.append("video_duration", videoDuration);
       if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
+      formData.append("type", type); // Added type to form data
 
       await API.post("/admin/add-exercise", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -176,6 +182,7 @@ export default function ExercisesPage() {
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoDuration("");
+      setType(""); // Reset type after submit
 
       fetchExercises(pagination.current_page);
     } catch (err) {
@@ -254,6 +261,16 @@ export default function ExercisesPage() {
                   <SelectItem value="beginner">Beginner</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
                   <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Exercise Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on_demand">On Demand</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -355,6 +372,7 @@ export default function ExercisesPage() {
                   <Badge key={idx}>{cat}</Badge>
                 ))}
                 <Badge variant="secondary">{ex.level}</Badge>
+                <Badge variant="outline">{ex.type}</Badge> 
               </div>
 
               <Button
