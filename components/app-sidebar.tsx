@@ -47,7 +47,7 @@ const data = {
   },
   navGroups: [
     {
-      // label: "Menu",
+      label: "Menu",
       items: [
         {
           title: "Dashboard",
