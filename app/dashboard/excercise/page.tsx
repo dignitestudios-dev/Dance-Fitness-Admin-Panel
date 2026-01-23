@@ -36,7 +36,7 @@ interface Exercise {
   tags: string | null;
   url: string;
   thumbnail: string | null;
-  type: "on_demand" | "regular"; // Added type to Exercise interface
+  type: "ondemand" | "regular"; // Added type to Exercise interface
 }
 
 interface PaginatedExercises {
