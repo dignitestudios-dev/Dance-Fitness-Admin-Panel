@@ -297,7 +297,7 @@ export default function ExercisesPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={type} onValueChange={setType}>
+              <Select value={type} onValueChange={(value: string) => setType(value as "on_demand" | "regular" | "")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Exercise Type" />
                 </SelectTrigger>
