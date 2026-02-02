@@ -9,6 +9,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "@/lib/slices/authSlice";
 import { useRouter } from "next/navigation";
 import type { AppDispatch, RootState } from "@/lib/store";
+       import Link from 'next/link';
+
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -55,26 +57,37 @@ const Login = () => {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Password</Label>
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-            >
-              {showPassword ?  <Eye /> : <EyeOff /> }
-            </button>
-          </div>
-        </div>
+
+
+<div className="space-y-2">
+  <Label>Password</Label>
+  <div className="relative">
+    <Input
+      type={showPassword ? "text" : "password"}
+      placeholder="Enter your password"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      required
+      className="pr-10"
+    />
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+    >
+      {showPassword ? <Eye /> : <EyeOff />}
+    </button>
+  </div>
+
+  {/* Forgot Password Link */}
+  <div className="text-right">
+    <Link href="/auth/forgetpassword" className="text-sm text-blue-500 hover:text-blue-700">
+      Forgot Password?
+    </Link>
+  </div>
+</div>
+
+
 
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
