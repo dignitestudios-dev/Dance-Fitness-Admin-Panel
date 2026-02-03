@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import { useEffect, useState } from "react";
 import { API } from "@/lib/api/axios";
 import { Loader2, Eye, Trash2, Plus } from "lucide-react";
@@ -63,7 +62,6 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const [category, setCategory] = useState("");
 
-
   // Add product modal
   const [addOpen, setAddOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +73,14 @@ export default function ProductsPage() {
   const [discount, setDiscount] = useState("");
   const [stock, setStock] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const categories = [
+    "Tools for designers",
+    "Tools for teachers",
+    "Guides and training plans",
+    "Team and group training",
+    "Virtual trainings and recordings",
+  ];
 
   const fetchProducts = async (page: number = 1) => {
     setLoading(true);
@@ -139,20 +145,17 @@ export default function ProductsPage() {
       formData.append("title", title);
       formData.append("description", description);
       formData.append("price", parseInt(price).toString());
-formData.append("discout_per", parseInt(discount).toString());  // Typo corrected to "discount"
-formData.append("stock", parseInt(stock).toString());
+      formData.append("discount_per", parseInt(discount).toString()); // Typo corrected
+      formData.append("stock", parseInt(stock).toString());
       formData.append("image", imageFile);
       formData.append("category", category);
-
 
       await API.post("/admin/add-product", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-
-
       setAddOpen(false);
-    window.location.reload();
+      window.location.reload();
 
       // Reset form
       setTitle("");
@@ -207,12 +210,21 @@ formData.append("stock", parseInt(stock).toString());
               <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
               <Textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} required />
               <Input placeholder="Price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required />
-              <Input
-  placeholder="Category"
-  value={category}
-  onChange={(e) => setCategory(e.target.value)}
-  required
-/>
+              
+              {/* Category Dropdown */}
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="" disabled>Select Category</option>
+                {categories.map((cat, index) => (
+                  <option key={index} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
 
               <Input placeholder="Discount %" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} />
               <Input placeholder="Stock" type="number" value={stock} onChange={(e) => setStock(e.target.value)} required />
@@ -313,42 +325,41 @@ formData.append("stock", parseInt(stock).toString());
       </Dialog>
 
       {/* Pagination */}
-{pagination.last_page > 1 && (
-  <div className="flex justify-center mt-6 space-x-2">
-    {/* Previous Page */}
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={!pagination.prev_page_url}
-      onClick={() => fetchProducts(pagination.current_page - 1)}
-    >
-      &laquo; Previous
-    </Button>
+      {pagination.last_page > 1 && (
+        <div className="flex justify-center mt-6 space-x-2">
+          {/* Previous Page */}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!pagination.prev_page_url}
+            onClick={() => fetchProducts(pagination.current_page - 1)}
+          >
+            &laquo; Previous
+          </Button>
 
-    {/* Page Numbers */}
-    {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
-      <Button
-        key={page}
-        size="sm"
-        variant={page === pagination.current_page ? "default" : "outline"}
-        onClick={() => fetchProducts(page)}
-      >
-        {page}
-      </Button>
-    ))}
+          {/* Page Numbers */}
+          {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
+            <Button
+              key={page}
+              size="sm"
+              variant={page === pagination.current_page ? "default" : "outline"}
+              onClick={() => fetchProducts(page)}
+            >
+              {page}
+            </Button>
+          ))}
 
-    {/* Next Page */}
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={!pagination.next_page_url}
-      onClick={() => fetchProducts(pagination.current_page + 1)}
-    >
-      Next &raquo;
-    </Button>
-  </div>
-)}
-
+          {/* Next Page */}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!pagination.next_page_url}
+            onClick={() => fetchProducts(pagination.current_page + 1)}
+          >
+            Next &raquo;
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
