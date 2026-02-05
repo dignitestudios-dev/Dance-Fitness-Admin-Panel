@@ -288,7 +288,7 @@ export default function ProductsPage() {
           ) : selectedProduct && (
             <div className="space-y-4">
               <img src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${selectedProduct.image}`}
-              className="w-full h-48 object-contain rounded" />
+              className="w-full h-48 object-contain rounded-lg" />
               <h2 className="text-lg font-semibold">{selectedProduct.title}</h2>
               <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               <div className="grid grid-cols-2 gap-3 text-sm">

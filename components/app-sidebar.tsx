@@ -21,6 +21,9 @@ import {
   Users2Icon,
   Bell,
   ShoppingBag,
+  ShoppingBasket,
+  ShoppingBasketIcon,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
@@ -74,6 +77,11 @@ const data = {
           title: "Products",
           url: "/dashboard/products",
           icon: ShoppingBag,
+        },
+         {
+          title: "Orders",
+          url: "/dashboard/orders",
+          icon: ShoppingCart,
         },
 
       ],
