@@ -69,7 +69,7 @@ const data = {
         },
         
          {
-          title: "Excercise",
+          title: "Exercise",
           url: "/dashboard/excercise",
           icon: DumbbellIcon,
         },
