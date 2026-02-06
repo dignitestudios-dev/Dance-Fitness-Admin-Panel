@@ -77,6 +77,26 @@ interface TrainingPlanPagination {
 
 
 export default function ExercisesPage() {
+  const ALL_CATEGORIES = [
+    "Balance",
+    "Endurance",
+    "Flexibility",
+    "Mini Dancers",
+    "On Demand Workout",
+    "Partners",
+    "Power",
+    "Strength",
+    "Warm Up",
+  ];
+
+  const toggleCategory = (
+    cat: string,
+    list: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    if (list.includes(cat)) setter(list.filter((c) => c !== cat));
+    else setter([...list, cat]);
+  };
   const [regularExercises, setRegularExercises] = useState<Exercise[]>([]);
   const [ondemandExercises, setOndemandExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -467,16 +487,25 @@ useEffect(() => {
                 onChange={(e) => setTitle(e.target.value)}
                 required
               />
-              <Input
-                placeholder="Categories (comma separated)"
-                value={categories.join(", ")}
-                onChange={(e) =>
-                  setCategories(
-                    e.target.value.split(",").map((c) => c.trim())
-                  )
-                }
-                required
-              />
+              <div>
+                <div className="text-sm font-medium mb-1">Categories</div>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_CATEGORIES.map((cat) => (
+                    <button
+                      type="button"
+                      key={cat}
+                      onClick={() => toggleCategory(cat, categories, setCategories)}
+                      className={`px-2 py-1 cursor-pointer rounded-sm text-sm ${
+                        categories.includes(cat)
+                          ? "bg-[#D32C86] text-white"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Level" />
@@ -564,14 +593,25 @@ useEffect(() => {
         onChange={(e) => setPlanTitle(e.target.value)}
         required
       />
-      <Input
-        placeholder="Categories (comma separated)"
-        value={planCategories.join(", ")}
-        onChange={(e) =>
-          setPlanCategories(e.target.value.split(",").map((c) => c.trim()))
-        }
-        required
-      />
+      <div>
+        <div className="text-sm font-medium mb-1">Categories</div>
+        <div className="flex flex-wrap gap-2">
+          {ALL_CATEGORIES.map((cat) => (
+            <button
+              type="button"
+              key={cat}
+              onClick={() => toggleCategory(cat, planCategories, setPlanCategories)}
+              className={`px-2 py-1 cursor-pointer rounded-sm text-sm ${
+                planCategories.includes(cat)
+                  ? "bg-[#D32C86] text-white"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
       <Select value={planLevel} onValueChange={setPlanLevel}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
@@ -854,14 +894,25 @@ useEffect(() => {
         onChange={(e) => setExerciseTitle(e.target.value)}
         required
       />
-      <Input
-        placeholder="Categories (comma separated)"
-        value={exerciseCategories.join(", ")}
-        onChange={(e) =>
-          setExerciseCategories(e.target.value.split(",").map((c) => c.trim()))
-        }
-        required
-      />
+      <div>
+        <div className="text-sm font-medium mb-1">Categories</div>
+        <div className="flex flex-wrap gap-2">
+          {ALL_CATEGORIES.map((cat) => (
+            <button
+              type="button"
+              key={cat}
+              onClick={() => toggleCategory(cat, exerciseCategories, setExerciseCategories)}
+              className={`px-2 py-1 rounded-sm text-sm ${
+                exerciseCategories.includes(cat)
+                  ? "bg-[#D32C86] text-white"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
       <Select value={exerciseLevel} onValueChange={setExerciseLevel}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
