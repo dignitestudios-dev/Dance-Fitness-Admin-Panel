@@ -27,6 +27,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "sonner";
 
 interface Exercise {
@@ -89,6 +90,27 @@ export default function ExercisesPage() {
     "Warm Up",
   ];
 
+  const ALL_TAGS = [
+    "Abs",
+    "Ankles",
+    "Arms",
+    "Back",
+    "Chest",
+    "Extension",
+    "Full Body",
+    "Glutes",
+    "Hamstrings",
+    "Hips",
+    "Jumps and Leaps",
+    "Kicks",
+    "Lower Body",
+    "Quadriceps",
+    "Shoulders",
+    "Turn Out",
+    "Turns",
+    "Upper Body",
+  ];
+
   const toggleCategory = (
     cat: string,
     list: string[],
@@ -128,7 +150,7 @@ export default function ExercisesPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [level, setLevel] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -147,6 +169,7 @@ const [planTitle, setPlanTitle] = useState("");
 const [planDescription, setPlanDescription] = useState("");
 const [planCategories, setPlanCategories] = useState<string[]>([]);
 const [planLevel, setPlanLevel] = useState("");
+const [planCoverImage, setPlanCoverImage] = useState<File | null>(null);
 const [planSubmitting, setPlanSubmitting] = useState(false);
 const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null); // track plan for modal
@@ -165,7 +188,7 @@ const [exerciseTitle, setExerciseTitle] = useState("");
 const [exerciseCategories, setExerciseCategories] = useState<string[]>([]);
 const [exerciseLevel, setExerciseLevel] = useState("");
 const [exerciseDescription, setExerciseDescription] = useState("");
-const [exerciseTags, setExerciseTags] = useState("");
+const [exerciseTags, setExerciseTags] = useState<string[]>([]);
 const [exerciseEquipment, setExerciseEquipment] = useState<string[]>([]);
 const [exerciseType, setExerciseType] = useState<"on_demand" | "regular" | "">("");
 const [exerciseVideoFile, setExerciseVideoFile] = useState<File | null>(null);
@@ -199,7 +222,20 @@ const handleAddExerciseToPlan = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!planForExercise) return alert("No training plan selected!");
   if (!exerciseVideoFile) return alert("Video is required!");
-  // if (!exerciseType) return alert("Select exercise type!");
+
+  // validate other required fields for exercise
+  if (
+    !exerciseTitle ||
+    exerciseCategories.length === 0 ||
+    !exerciseLevel ||
+    !exerciseDescription ||
+    exerciseTags.length === 0 ||
+    exerciseEquipment.length === 0 ||
+    !exerciseThumbnailFile
+  ) {
+    alert("Please fill all required fields for the exercise.");
+    return;
+  }
 
   setExerciseSubmitting(true);
 
@@ -210,11 +246,12 @@ const handleAddExerciseToPlan = async (e: React.FormEvent) => {
     exerciseCategories.forEach((c) => formData.append("categories[]", c));
     formData.append("level", exerciseLevel);
     formData.append("description", exerciseDescription);
-    formData.append("tags", exerciseTags);
+    // append tags as tags[]
+    exerciseTags.forEach((t) => formData.append("tags[]", t));
     exerciseEquipment.forEach((eq) => formData.append("equipment[]", eq));
     formData.append("video", exerciseVideoFile);
     formData.append("video_duration", exerciseVideoDuration);
-    if (exerciseThumbnailFile) formData.append("thumbnail", exerciseThumbnailFile);
+    formData.append("thumbnail", exerciseThumbnailFile as Blob);
     formData.append("type", exerciseType);
 
     await API.post("/admin/training-plans/add-exercise", formData, {
@@ -229,7 +266,7 @@ const handleAddExerciseToPlan = async (e: React.FormEvent) => {
     setExerciseCategories([]);
     setExerciseLevel("");
     setExerciseDescription("");
-    setExerciseTags("");
+    setExerciseTags([]);
     setExerciseEquipment([]);
     setExerciseVideoFile(null);
     setExerciseThumbnailFile(null);
@@ -249,27 +286,34 @@ const handleAddExerciseToPlan = async (e: React.FormEvent) => {
 const handleTrainingPlanSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  if (!planTitle || !planLevel || planCategories.length === 0) {
+  if (!planTitle || !planLevel || planCategories.length === 0 || !planCoverImage) {
+    alert("Please fill all required fields!");
+    return;
+  }
+  if (!planDescription) {
     alert("Please fill all required fields!");
     return;
   }
 
   setPlanSubmitting(true);
   try {
-    const payload = {
-      title: planTitle,
-      description: planDescription,
-      categories: planCategories,
-      level: planLevel,
-    };
+    const formData = new FormData();
+    formData.append("title", planTitle);
+    formData.append("description", planDescription);
+    planCategories.forEach((c) => formData.append("categories[]", c));
+    formData.append("level", planLevel);
+    formData.append("cover_image", planCoverImage as Blob);
 
-    await API.post("/admin/training-plans/create", payload);
+    await API.post("/admin/training-plans/create", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
     // Reset form
     setPlanTitle("");
     setPlanDescription("");
     setPlanCategories([]);
     setPlanLevel("");
+    setPlanCoverImage(null);
     setPlanDialogOpen(false);
 
     // Refresh training plans list
@@ -358,6 +402,10 @@ const handleTrainingPlanSubmit = async (e: React.FormEvent) => {
     if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
   };
 
+  const handlePlanCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) setPlanCoverImage(e.target.files[0]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoFile) {
@@ -370,6 +418,20 @@ const handleTrainingPlanSubmit = async (e: React.FormEvent) => {
       return;
     }
 
+    // validate other required fields
+    if (
+      !title ||
+      categories.length === 0 ||
+      !level ||
+      !description ||
+      tags.length === 0 ||
+      equipment.length === 0 ||
+      !thumbnailFile
+    ) {
+      alert("Please fill all required fields for the exercise.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -377,11 +439,12 @@ const handleTrainingPlanSubmit = async (e: React.FormEvent) => {
       categories.forEach((c) => formData.append("categories[]", c));
       formData.append("level", level);
       formData.append("description", description);
-      formData.append("tags", tags);
+      // append tags as tags[]
+      tags.forEach((t) => formData.append("tags[]", t));
       equipment.forEach((eq) => formData.append("equipment[]", eq));
       formData.append("video", videoFile);
       formData.append("video_duration", videoDuration);
-      if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
+      formData.append("thumbnail", thumbnailFile as Blob);
       formData.append("type", type);
 
       await API.post("/admin/add-exercise", formData, {
@@ -395,7 +458,7 @@ const handleTrainingPlanSubmit = async (e: React.FormEvent) => {
       setCategories([]);
       setLevel("");
       setDescription("");
-      setTags("");
+      setTags([]);
       setEquipment([]);
       setVideoFile(null);
       setThumbnailFile(null);
@@ -480,7 +543,7 @@ useEffect(() => {
               <DialogTitle>Add New Exercise</DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-3 mt-2">
+            <form onSubmit={handleSubmit} className="space-y-1 mt-2">
               <Input
                 placeholder="Title"
                 value={title}
@@ -506,7 +569,7 @@ useEffect(() => {
                   ))}
                 </div>
               </div>
-              <Select value={level} onValueChange={setLevel}>
+              <Select value={level} onValueChange={setLevel} required>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Level" />
                 </SelectTrigger>
@@ -517,7 +580,7 @@ useEffect(() => {
                 </SelectContent>
               </Select>
 
-              <Select value={type} onValueChange={(value: string) => setType(value as "on_demand" | "regular" | "")}>
+              <Select value={type} onValueChange={(value: string) => setType(value as "on_demand" | "regular" | "")} required>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Exercise Type" />
                 </SelectTrigger>
@@ -531,12 +594,43 @@ useEffect(() => {
                 placeholder="Description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                required
               />
-              <Input
-                placeholder="Tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
+              <div>
+                <div className="text-sm font-medium mb-1">Tags</div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full text-left">
+                      {tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {tags.map((t) => (
+                            <span key={t} className="text-xs px-2 py-0.5 rounded">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "Select Tags"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="grid gap-2 max-h-48 overflow-auto">
+                      {ALL_TAGS.map((tag) => (
+                        <label key={tag} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={tags.includes(tag)}
+                            onChange={() => toggleCategory(tag, tags, setTags)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">{tag}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Input
                 placeholder="Equipment"
                 value={equipment.join(", ")}
@@ -545,6 +639,7 @@ useEffect(() => {
                     e.target.value.split(",").map((eq) => eq.trim())
                   )
                 }
+                required
               />
 
               <h1>Video</h1>
@@ -567,6 +662,7 @@ useEffect(() => {
                 type="file"
                 accept="image/*"
                 onChange={handleThumbnailChange}
+                required
               />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Adding..." : "Add Exercise"}
@@ -586,7 +682,7 @@ useEffect(() => {
       <DialogTitle>Create Training Plan</DialogTitle>
     </DialogHeader>
 
-    <form onSubmit={handleTrainingPlanSubmit} className="space-y-3 mt-2">
+    <form onSubmit={handleTrainingPlanSubmit} className="space-y-1 mt-2">
       <Input
         placeholder="Title"
         value={planTitle}
@@ -612,7 +708,7 @@ useEffect(() => {
           ))}
         </div>
       </div>
-      <Select value={planLevel} onValueChange={setPlanLevel}>
+      <Select value={planLevel} onValueChange={setPlanLevel} required>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
         </SelectTrigger>
@@ -626,7 +722,18 @@ useEffect(() => {
         placeholder="Description"
         value={planDescription}
         onChange={(e) => setPlanDescription(e.target.value)}
+        required
       />
+      
+      <div>
+        <div className="text-sm font-medium mb-1">Cover Image</div>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={handlePlanCoverImageChange}
+          required
+        />
+      </div>
 
       <Button type="submit" className="w-full" disabled={planSubmitting}>
         {planSubmitting ? "Creating..." : "Create Plan"}
@@ -758,7 +865,19 @@ useEffect(() => {
     className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200 relative"
     onClick={() => setSelectedPlan(plan)}
   >
-    
+    {plan.cover_image && (
+      <div className="relative w-full h-40 bg-gray-100">
+        <img
+          src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${plan.cover_image}`}
+          alt={plan.title}
+          className="w-full h-40 object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src =
+              "https://placehold.co/400x200?text=No+Cover";
+          }}
+        />
+      </div>
+    )}
 
     <CardHeader className="pb-1">
       <CardTitle className="text-lg font-semibold">{plan.title}</CardTitle>
@@ -913,7 +1032,7 @@ useEffect(() => {
           ))}
         </div>
       </div>
-      <Select value={exerciseLevel} onValueChange={setExerciseLevel}>
+      <Select value={exerciseLevel} onValueChange={setExerciseLevel} required>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
         </SelectTrigger>
@@ -937,18 +1056,50 @@ useEffect(() => {
         placeholder="Description"
         value={exerciseDescription}
         onChange={(e) => setExerciseDescription(e.target.value)}
+        required
       />
-      <Input
-        placeholder="Tags"
-        value={exerciseTags}
-        onChange={(e) => setExerciseTags(e.target.value)}
-      />
+      <div>
+        <div className="text-sm font-medium mb-1">Tags</div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full text-left">
+              {exerciseTags.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {exerciseTags.map((t) => (
+                    <span key={t} className="text-xs px-2 py-0.5 bg-muted rounded">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                "Select Tags"
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="grid gap-2 max-h-48 overflow-auto">
+              {ALL_TAGS.map((tag) => (
+                <label key={tag} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={exerciseTags.includes(tag)}
+                    onChange={() => toggleCategory(tag, exerciseTags, setExerciseTags)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{tag}</span>
+                </label>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
       <Input
         placeholder="Equipment (comma separated)"
         value={exerciseEquipment.join(", ")}
         onChange={(e) =>
           setExerciseEquipment(e.target.value.split(",").map((eq) => eq.trim()))
         }
+        required
       />
 
       <h1>Video</h1>
@@ -962,7 +1113,7 @@ useEffect(() => {
       )}
 
       <h1>Thumbnail</h1>
-      <Input type="file" accept="image/*" onChange={handleExerciseThumbnailChange} />
+      <Input type="file" accept="image/*" onChange={handleExerciseThumbnailChange} required />
 
       <Button type="submit" className="w-full" disabled={exerciseSubmitting}>
         {exerciseSubmitting ? "Adding..." : "Add Exercise"}
