@@ -218,7 +218,7 @@ export default function NotificationsPage() {
       {/* Notifications List */}
       <div className="space-y-4">
         {notifications.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-center text-muted-foreground">
             No notifications found.
           </p>
         ) : (
@@ -251,27 +251,30 @@ export default function NotificationsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center items-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          disabled={!pagination.prev_page_url}
-          onClick={() => fetchNotifications(pagination.current_page - 1)}
-        >
-          Previous
-        </Button>
+      {(pagination.prev_page_url || pagination.next_page_url) && (
+  <div className="flex justify-center items-center gap-2 mt-4">
+    <Button
+      variant="outline"
+      disabled={!pagination.prev_page_url}
+      onClick={() => fetchNotifications(pagination.current_page - 1)}
+    >
+      Previous
+    </Button>
 
-        <span className="text-sm">
-          Page {pagination.current_page} of {pagination.last_page}
-        </span>
+    <span className="text-sm">
+      Page {pagination.current_page} of {pagination.last_page}
+    </span>
 
-        <Button
-          variant="outline"
-          disabled={!pagination.next_page_url}
-          onClick={() => fetchNotifications(pagination.current_page + 1)}
-        >
-          Next
-        </Button>
-      </div>
+    <Button
+      variant="outline"
+      disabled={!pagination.next_page_url}
+      onClick={() => fetchNotifications(pagination.current_page + 1)}
+    >
+      Next
+    </Button>
+  </div>
+)}
+
     </div>
   );
 }
