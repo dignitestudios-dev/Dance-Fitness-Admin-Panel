@@ -206,20 +206,26 @@ export default function EditExerciseDialog({
             </p>
           </div> */}
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-md"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="w-md" disabled={submitting}>
-              {submitting ? "Updating..." : "Update Exercise"}
-            </Button>
-          </div>
+        <div className="flex justify-end gap-2">
+  <Button
+    type="button"
+    variant="outline"
+    size="sm"
+    onClick={() => onOpenChange(false)}
+    disabled={submitting}
+  >
+    Cancel
+  </Button>
+
+  <Button
+    type="submit"
+    size="sm"
+    disabled={submitting}
+  >
+    {submitting ? "Updating..." : "Update"}
+  </Button>
+</div>
+
         </form>
       </DialogContent>
     </Dialog>
