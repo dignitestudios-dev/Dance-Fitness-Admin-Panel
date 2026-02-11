@@ -34,7 +34,7 @@ export default function AddExerciseToTrainingPlanDialog({
   const [exerciseEquipment, setExerciseEquipment] = useState<string[]>([]);
   const [exerciseType, setExerciseType] = useState<"on_demand" | "regular" | "">("");
   const [exerciseVideoFile, setExerciseVideoFile] = useState<File | null>(null);
-  const [exerciseThumbnailFile, setExerciseThumbnailFile] = useState<File | null>(null);
+  // const [exerciseThumbnailFile, setExerciseThumbnailFile] = useState<File | null>(null);
   const [exerciseVideoDuration, setExerciseVideoDuration] = useState("");
 
   const handleExerciseVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,9 +52,9 @@ export default function AddExerciseToTrainingPlanDialog({
     video.src = URL.createObjectURL(file);
   };
 
-  const handleExerciseThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setExerciseThumbnailFile(e.target.files[0]);
-  };
+  // const handleExerciseThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files?.[0]) setExerciseThumbnailFile(e.target.files[0]);
+  // };
 
   const resetForm = () => {
     setExerciseTitle("");
@@ -64,7 +64,7 @@ export default function AddExerciseToTrainingPlanDialog({
     setExerciseTags([]);
     setExerciseEquipment([]);
     setExerciseVideoFile(null);
-    setExerciseThumbnailFile(null);
+    // setExerciseThumbnailFile(null);
     setExerciseVideoDuration("");
     setExerciseType("");
   };
@@ -86,8 +86,8 @@ export default function AddExerciseToTrainingPlanDialog({
       !exerciseLevel ||
       !exerciseDescription ||
       exerciseTags.length === 0 ||
-      exerciseEquipment.length === 0 ||
-      !exerciseThumbnailFile
+      exerciseEquipment.length === 0 
+      // !exerciseThumbnailFile
     ) {
       toast.error("Please fill all required fields for the exercise.");
       return;
@@ -106,7 +106,7 @@ export default function AddExerciseToTrainingPlanDialog({
       exerciseEquipment.forEach((eq) => formData.append("equipment[]", eq));
       formData.append("video", exerciseVideoFile);
       formData.append("video_duration", exerciseVideoDuration);
-      formData.append("thumbnail", exerciseThumbnailFile as Blob);
+      // formData.append("thumbnail", exerciseThumbnailFile as Blob);
       formData.append("type", exerciseType);
 
       await API.post("/admin/training-plans/add-exercise", formData, {
@@ -188,8 +188,8 @@ export default function AddExerciseToTrainingPlanDialog({
             <Input value={exerciseVideoDuration} disabled placeholder="Video duration auto-detected" />
           )}
 
-          <h1>Thumbnail</h1>
-          <Input type="file" accept="image/*" onChange={handleExerciseThumbnailChange} required />
+          {/* <h1>Thumbnail</h1>
+          <Input type="file" accept="image/*" onChange={handleExerciseThumbnailChange} required /> */}
 
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? "Adding..." : "Add Exercise"}

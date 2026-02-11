@@ -260,9 +260,16 @@ export default function ExercisesPage() {
   <div className="space-y-4">
 
     {/* VIDEO (if exists) */}
-    {selectedExercise.url && (
-      <video src={selectedExercise.url} controls className="w-full rounded-md" />
-    )}
+{/* {selectedExercise.url && (
+  <video
+    key={selectedExercise.id}
+    src={selectedExercise.url}
+    controls
+    className="w-full rounded-md"
+  />
+)} */}
+
+
 
     {/* Exercise details */}
     <div className="space-y-3 text-sm">

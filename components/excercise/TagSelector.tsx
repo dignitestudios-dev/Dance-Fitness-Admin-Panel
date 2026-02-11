@@ -23,7 +23,7 @@ export default function TagSelector({
             {selectedTags.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {selectedTags.map((t) => (
-                  <span key={t} className="text-xs px-2 py-0.5 bg-muted rounded">
+                  <span key={t} className="text-xs px-2 py-0.5 rounded bg-[#D32C86] text-white">
                     {t}
                   </span>
                 ))}
@@ -41,7 +41,9 @@ export default function TagSelector({
                   type="checkbox"
                   checked={selectedTags.includes(tag)}
                   onChange={() => onToggle(tag)}
-                  className="w-4 h-4"
+                 className="w-4 h-4 appearance-none border border-gray-300 rounded-sm 
+             checked:bg-[#D32C86] checked:border-[#D32C86] 
+             relative cursor-pointer"
                 />
                 <span className="text-sm">{tag}</span>
               </label>

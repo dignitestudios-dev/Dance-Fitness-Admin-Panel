@@ -22,6 +22,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dancer Fitness",
   description: "Dancer Fitness Admin Panel",
+  icons: { 
+    icon: "/icon.png"
+  } ,
 };
 
 export default function RootLayout({

@@ -32,7 +32,7 @@ export default function EditExerciseDialog({
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  // const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [type, setType] = useState<"ondemand" | "regular" | "">("");
 
   // Populate form when exercise changes
@@ -59,13 +59,13 @@ export default function EditExerciseDialog({
       
       setEquipment([]); // Equipment not available in current Exercise type
       setType(exercise.type);
-      setThumbnailFile(null);
+      // setThumbnailFile(null);
     }
   }, [exercise]);
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
-  };
+  // const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
+  // };
 
   const resetForm = () => {
     setTitle("");
@@ -74,7 +74,7 @@ export default function EditExerciseDialog({
     setDescription("");
     setTags([]);
     setEquipment([]);
-    setThumbnailFile(null);
+    // setThumbnailFile(null);
     setType("");
   };
 
@@ -103,9 +103,9 @@ export default function EditExerciseDialog({
       formData.append("type", type);
       
       // Only append thumbnail if a new one is selected
-      if (thumbnailFile) {
-        formData.append("thumbnail", thumbnailFile);
-      }
+      // if (thumbnailFile) {
+      //   formData.append("thumbnail", thumbnailFile);
+      // }
 
       // Note: Video is NOT included as per requirements
       await API.put(`/admin/exercises/${exercise.id}`, formData, {
@@ -170,7 +170,7 @@ export default function EditExerciseDialog({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ondemand">On Demand</SelectItem>
-              <SelectItem value="regular">Regular</SelectItem>
+              <SelectItem value="regular">Exercise</SelectItem>
             </SelectContent>
           </Select>
 
@@ -192,13 +192,13 @@ export default function EditExerciseDialog({
             onChange={(e) => setEquipment(e.target.value.split(",").map((eq) => eq.trim()).filter(Boolean))}
           />
 
-          <div>
+          {/* <div>
             <div className="text-sm font-medium mb-1">Thumbnail (optional - leave empty to keep current)</div>
             <Input type="file" accept="image/*" onChange={handleThumbnailChange} />
             {exercise.thumbnail && !thumbnailFile && (
               <p className="text-xs text-gray-500 mt-1">Current thumbnail will be kept if not changed</p>
             )}
-          </div>
+          </div> */}
 
           {/* <div className="bg-gray-50 p-3 rounded-md">
             <p className="text-xs text-gray-600">

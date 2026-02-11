@@ -27,7 +27,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
   const [tags, setTags] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  // const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState("");
   const [type, setType] = useState<"on_demand" | "regular" | "">("");
 
@@ -46,9 +46,9 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
     video.src = URL.createObjectURL(file);
   };
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
-  };
+  // const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
+  // };
 
   const resetForm = () => {
     setTitle("");
@@ -58,7 +58,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
     setTags([]);
     setEquipment([]);
     setVideoFile(null);
-    setThumbnailFile(null);
+    // setThumbnailFile(null);
     setVideoDuration("");
     setType("");
   };
@@ -66,7 +66,12 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!videoFile || !type || !thumbnailFile) {
+    // if (!videoFile || !type || !thumbnailFile) {
+    //   toast.error("Please fill all required fields");
+    //   return;
+    // }
+    
+    if (!videoFile || !type) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -87,7 +92,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
       equipment.forEach((eq) => formData.append("equipment[]", eq));
       formData.append("video", videoFile);
       formData.append("video_duration", videoDuration);
-      formData.append("thumbnail", thumbnailFile as Blob);
+      // formData.append("thumbnail", thumbnailFile as Blob);
       formData.append("type", type);
 
       await API.post("/admin/add-exercise", formData, {
@@ -155,7 +160,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ondemand">On Demand</SelectItem>
-              <SelectItem value="regular">Regular</SelectItem>
+              <SelectItem value="regular">Exercise</SelectItem>
             </SelectContent>
           </Select>
 
@@ -189,8 +194,8 @@ export default function AddExerciseDialog({ open, onOpenChange, onSuccess }: Add
             />
           )}
 
-          <h1>Thumbnail</h1>
-          <Input type="file" accept="image/*" onChange={handleThumbnailChange} required />
+          {/* <h1>Thumbnail</h1>
+          <Input type="file" accept="image/*" onChange={handleThumbnailChange} required /> */}
 
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? "Adding..." : "Add Exercise"}

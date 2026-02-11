@@ -28,7 +28,7 @@ export default function ExerciseCard({
   return (
     <Card className="overflow-hidden">
       {/* Media */}
-      <div className="relative">
+      {/* <div className="relative">
         {isPlaying ? (
           <video controls className="w-full h-40 object-cover">
             <source
@@ -61,7 +61,20 @@ export default function ExerciseCard({
             <Play className="h-5 w-5 text-green-500" />
           </button>
         )}
-      </div>
+      </div> */}
+      <div className="relative">
+  <video
+    controls
+    className="w-full h-40 object-cover"
+  >
+    <source
+      src={getVideoUrl(exercise.url, S3_BUCKET_URL)}
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+</div>
+
 
       {/* Content */}
       <CardContent className="space-y-2">
@@ -89,7 +102,7 @@ export default function ExerciseCard({
             onClick={onView} // ✅ FIXED
           >
             <Eye className="h-4 w-4 mr-1" />
-            View
+            
           </Button>
 
           <Button
@@ -99,7 +112,7 @@ export default function ExerciseCard({
             onClick={onEdit}
           >
             <Edit className="h-4 w-4 mr-1" />
-            Edit
+            
           </Button>
 
           <Button
@@ -109,7 +122,6 @@ export default function ExerciseCard({
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4 mr-1" />
-            Delete
           </Button>
         </div>
       </CardContent>
