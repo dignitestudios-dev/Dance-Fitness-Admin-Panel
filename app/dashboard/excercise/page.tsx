@@ -121,6 +121,7 @@ export default function ExercisesPage() {
       setOndemandExercises((p) => p.filter((e) => e.id !== id));
       toast.success("Exercise deleted");
       setDeleteOpen(false);
+      window.location.reload(); // Temporary fix to refresh pagination after deletion
     } catch {
       toast.error("Delete failed");
     }
