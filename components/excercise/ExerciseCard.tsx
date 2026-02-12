@@ -102,7 +102,7 @@ export default function ExerciseCard({
             onClick={onView} // ✅ FIXED
           >
             <Eye className="h-4 w-4 mr-1" />
-            
+            View
           </Button>
 
           <Button
@@ -112,7 +112,7 @@ export default function ExerciseCard({
             onClick={onEdit}
           >
             <Edit className="h-4 w-4 mr-1" />
-            
+            Edit
           </Button>
 
           <Button
@@ -122,6 +122,7 @@ export default function ExerciseCard({
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4 mr-1" />
+            Delete
           </Button>
         </div>
       </CardContent>
