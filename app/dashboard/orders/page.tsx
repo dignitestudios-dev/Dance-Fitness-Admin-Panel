@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
-  User as UserIcon
+  User as UserIcon,
+  Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // --- Types (Keep as provided) ---
 interface OrderItem {
@@ -61,6 +68,13 @@ interface Order {
   created_at: string;
   items: OrderItem[];
   user: User;
+
+   transaction_id?: string;
+  charge_id?: string;
+  cancel_reason?: string | null;
+  cancelled_by?: string | null;
+
+
 }
 
 export default function OrdersPage() {
@@ -70,6 +84,9 @@ export default function OrdersPage() {
   const [lastPage, setLastPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+const [viewOrder, setViewOrder] = useState<Order | null>(null);
+const [viewLoading, setViewLoading] = useState(false);
 
   const fetchOrders = async (page: number = 1) => {
     setLoading(true);
@@ -109,6 +126,21 @@ export default function OrdersPage() {
       default: return "destructive";
     }
   };
+
+const fetchOrderById = async (orderId: number) => {
+  setViewLoading(true);
+  try {
+    const res = await API.get(`/admin/orders/${orderId}`);
+
+    // ✅ IMPORTANT: use .data.data
+setViewOrder(res.data);
+    setIsViewOpen(true);
+  } catch (err) {
+    console.error("Failed to fetch order:", err);
+  } finally {
+    setViewLoading(false);
+  }
+};
 
   if (loading) {
     return (
@@ -193,10 +225,20 @@ export default function OrdersPage() {
                             setIsConfirmOpen(true);
                           }}
                         >
-                          <CheckCircle2 className="mr-2 h-4 w-4 " />
+                          <CheckCircle2 className=" h-4 w-4 " />
                          Mark as Complete
                         </Button>
                       )}
+                      <Button
+  size="sm"
+  variant="outline"
+  className="mr-2 ml-2 cursor-pointer"
+  onClick={() => fetchOrderById(order.id)}
+>
+                            <Eye className=" h-4 w-4 " />
+
+  View
+</Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -249,6 +291,150 @@ export default function OrdersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+     <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Order #{viewOrder?.id}</DialogTitle>
+    </DialogHeader>
+
+    {viewLoading ? (
+      <div className="flex justify-center py-10">
+        <Loader2 className="animate-spin h-6 w-6" />
+      </div>
+    ) : viewOrder && (
+      <div className="space-y-6">
+
+        {/* 👤 Customer */}
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage
+              src={
+                viewOrder.user.avatar
+                  ? `https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${viewOrder.user.avatar}`
+                  : ""
+              }
+            />
+            <AvatarFallback>
+              {viewOrder.user.first_name[0]}
+              {viewOrder.user.last_name[0]}
+            </AvatarFallback>
+          </Avatar>
+
+          <div>
+            <p className="font-medium">
+              {viewOrder.user.first_name} {viewOrder.user.last_name}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              @{viewOrder.user.user_name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {viewOrder.user.email}
+            </p>
+          </div>
+        </div>
+
+        {/* 📦 Order Info */}
+        <div className="grid grid-cols-2 gap-4 text-sm">
+
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Status:
+            <Badge variant={getStatusVariant(viewOrder.status)}>
+              {viewOrder.status}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            {new Date(viewOrder.created_at).toLocaleString()}
+          </div>
+
+          <div className="flex items-center gap-2 col-span-2">
+            <MapPin className="h-4 w-4" />
+            {viewOrder.shipping_delivery_address}
+          </div>
+
+        </div>
+
+        {/* 💳 Payment Info */}
+        <div className="border rounded-lg p-4 space-y-2">
+          <h3 className="font-semibold text-sm">Payment Details</h3>
+
+          <div className="flex justify-between text-sm">
+            <span>Card Last Digits</span>
+            <span>**** {viewOrder.payment_method_last_digits}</span>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <span>Transaction ID</span>
+            <span className="truncate max-w-[180px]">
+  {viewOrder.transaction_id || "N/A"}
+</span>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <span>Charge ID</span>
+           <span className="truncate max-w-[180px]">
+  {viewOrder.charge_id || "N/A"}
+</span>
+          </div>
+        </div>
+
+        {/* 🛒 Items */}
+        <div>
+          <h3 className="font-semibold mb-2">Items</h3>
+
+          <div className="space-y-2">
+            {viewOrder.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between border rounded-md p-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium">
+                    Product #{item.product_id}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Qty: {item.quantity}
+                  </p>
+                </div>
+
+                <div className="font-medium">
+                  ${Number(item.price).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 💰 Total */}
+        <div className="flex justify-between text-lg font-semibold border-t pt-4">
+          <span>Total</span>
+          <span>${Number(viewOrder.charged_amount).toFixed(2)}</span>
+        </div>
+
+        {/* ❌ Cancel Info (if exists) */}
+        {(viewOrder.cancelled_by || viewOrder.cancel_reason) && (
+          <div className="border rounded-lg p-4 bg-red-50 text-sm">
+            <h3 className="font-semibold text-red-600 mb-2">
+              Cancellation Info
+            </h3>
+
+            {viewOrder.cancelled_by && (
+              <p>Cancelled By: {viewOrder.cancelled_by}</p>
+            )}
+
+            {viewOrder.cancel_reason && (
+              <p>Reason: {viewOrder.cancel_reason}</p>
+            )}
+          </div>
+        )}
+
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
     </div>
   );
 }
