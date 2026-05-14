@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface Metric {
   value: string;
-  change_from_yesterday: string;
+  change_from_yesterday?: string;
 }
 
 interface StatCardsProps {
@@ -33,13 +33,13 @@ export function StatCards({ data }: StatCardsProps) {
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 p-4 pb-0">
       {metrics.map((metric, index) => {
         const change = metric.data?.change_from_yesterday;
         const isPositive = change?.startsWith("+");
 
         return (
-          <Card key={index} className="border">
+          <Card key={index} className="border py-4">
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between">
                 <metric.icon className="text-muted-foreground size-6" />

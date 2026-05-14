@@ -1,353 +1,795 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  RefreshCcw,
+} from "lucide-react";
+
 import { API } from "@/lib/api/axios";
-import { Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { toast } from "sonner";
 
 import ExerciseCard from "@/components/excercise/ExerciseCard";
+
 import TrainingPlanCard from "@/components/excercise/TrainingPlanCard";
+
 import AddExerciseDialog from "@/components/excercise/AddExerciseDialog";
+
 import AddTrainingPlanDialog from "@/components/excercise/AddTrainingPlanDialog";
+
 import TrainingPlanModal from "@/components/excercise/TrainingPlanModal";
-import AddExerciseToTrainingPlanDialog from "@/components/excercise/AddExerciseToTrainingPlanDialog";
+
 import DeleteExerciseDialog from "@/components/excercise/DeleteExerciseDialog";
+
 import EditExerciseDialog from "@/components/excercise/EditExerciseDialog";
-import Pagination from "@/components/excercise/Pagination";
 
 import {
   Exercise,
   TrainingPlan,
   PaginatedExercises,
-  TrainingPlanPagination,
 } from "@/components/excercise/types";
 
-type Tab = "regular" | "ondemand" | "training-plans";
+type Tab =
+  | "regular"
+  | "ondemand"
+
+const SmartPagination = ({
+  currentPage,
+  lastPage,
+  onPageChange,
+}: {
+  currentPage: number;
+  lastPage: number;
+  onPageChange: (
+    p: number
+  ) => void;
+}) => {
+  const getPages = () => {
+    const pages: (
+      | number
+      | string
+    )[] = [];
+
+    const range = 1;
+
+    for (
+      let i = 1;
+      i <= lastPage;
+      i++
+    ) {
+      if (
+        i === 1 ||
+        i === lastPage ||
+        (i >=
+          currentPage -
+            range &&
+          i <=
+            currentPage +
+              range)
+      ) {
+        pages.push(i);
+      } else if (
+        i ===
+          currentPage -
+            range -
+            1 ||
+        i ===
+          currentPage +
+            range +
+            1
+      ) {
+        if (
+          !pages.includes(
+            "..."
+          )
+        )
+          pages.push("...");
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8 mb-12">
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={
+          currentPage === 1
+        }
+        onClick={() =>
+          onPageChange(
+            currentPage - 1
+          )
+        }
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
+      <div className="flex items-center gap-1">
+        {getPages().map(
+          (page, i) =>
+            page ===
+            "..." ? (
+              <MoreHorizontal
+                key={`sep-${i}`}
+                className="h-4 w-4 text-muted-foreground mx-1"
+              />
+            ) : (
+              <Button
+                key={i}
+                variant={
+                  currentPage ===
+                  page
+                    ? "default"
+                    : "outline"
+                }
+                className={
+                  currentPage ===
+                  page
+                    ? "bg-[#D32C86] hover:bg-[#D32C86]/90"
+                    : "w-10"
+                }
+                onClick={() =>
+                  onPageChange(
+                    page as number
+                  )
+                }
+              >
+                {page}
+              </Button>
+            )
+        )}
+      </div>
+
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={
+          currentPage ===
+          lastPage
+        }
+        onClick={() =>
+          onPageChange(
+            currentPage + 1
+          )
+        }
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
 
 export default function ExercisesPage() {
-  const [regularExercises, setRegularExercises] = useState<Exercise[]>([]);
-  const [ondemandExercises, setOndemandExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [paginationRegular, setPaginationRegular] =
-    useState<PaginatedExercises>({
-      current_page: 1,
-      data: [],
-      last_page: 1,
-      next_page_url: null,
-      prev_page_url: null,
-    });
-
-  const [paginationOndemand, setPaginationOndemand] =
-    useState<PaginatedExercises>({
-      current_page: 1,
-      data: [],
-      last_page: 1,
-      next_page_url: null,
-      prev_page_url: null,
-    });
-
-  const [activeTab, setActiveTab] = useState<Tab>("regular");
-  const [playingId, setPlayingId] = useState<number | null>(null);
-
-  // Delete
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  // Edit
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
-
-  // View Details
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedExercise, setSelectedExercise] =
-    useState<Exercise | null>(null);
-
-  // Training plans
-  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>([]);
-  const [trainingPlansPagination, setTrainingPlansPagination] =
-    useState<TrainingPlanPagination | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null);
-
-  // Dialogs
-  const [addExerciseDialogOpen, setAddExerciseDialogOpen] = useState(false);
-  const [addTrainingPlanDialogOpen, setAddTrainingPlanDialogOpen] =
-    useState(false);
   const [
-    addExerciseToTrainingPlanDialogOpen,
-    setAddExerciseToTrainingPlanDialogOpen,
+    regularExercises,
+    setRegularExercises,
+  ] = useState<
+    Exercise[]
+  >([]);
+
+  const [
+    ondemandExercises,
+    setOndemandExercises,
+  ] = useState<
+    Exercise[]
+  >([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [
+    paginationRegular,
+    setPaginationRegular,
+  ] =
+    useState<PaginatedExercises>(
+      {
+        current_page: 1,
+        data: [],
+        last_page: 1,
+        next_page_url: null,
+        prev_page_url: null,
+      }
+    );
+
+  const [
+    paginationOndemand,
+    setPaginationOndemand,
+  ] =
+    useState<PaginatedExercises>(
+      {
+        current_page: 1,
+        data: [],
+        last_page: 1,
+        next_page_url: null,
+        prev_page_url: null,
+      }
+    );
+
+  const [activeTab, setActiveTab] =
+    useState<Tab>("regular");
+
+  const [playingId, setPlayingId] =
+    useState<number | null>(
+      null
+    );
+
+  const [deleteOpen, setDeleteOpen] =
+    useState(false);
+
+  const [deletingId, setDeletingId] =
+    useState<number | null>(
+      null
+    );
+
+  const [editOpen, setEditOpen] =
+    useState(false);
+
+  const [
+    editingExercise,
+    setEditingExercise,
+  ] =
+    useState<Exercise | null>(
+      null
+    );
+
+  const [detailsOpen, setDetailsOpen] =
+    useState(false);
+
+  const [
+    selectedExercise,
+    setSelectedExercise,
+  ] =
+    useState<Exercise | null>(
+      null
+    );
+
+  // const [
+  //   trainingPlans,
+  //   setTrainingPlans,
+  // ] = useState<
+  //   TrainingPlan[]
+  // >([]);
+
+  // const [selectedPlan, setSelectedPlan] =
+  //   useState<TrainingPlan | null>(
+  //     null
+  //   );
+
+  const [
+    addExerciseOpen,
+    setAddExerciseOpen,
   ] = useState(false);
-  const [planForExercise, setPlanForExercise] =
-    useState<TrainingPlan | null>(null);
 
-  const fetchExercises = async (page: number = 1) => {
-    setLoading(true);
-    try {
-      const res = await API.get("/admin/exercises", { params: { page } });
+  // Normalize Vimeo URLs
+  const normalizeData = (
+    data: any[]
+  ) =>
+    (data || []).map(
+      (item) => {
+        let url =
+          item.video_url ||
+          item.video ||
+          "";
 
-      setRegularExercises(res.data.regular.data);
-      setPaginationRegular(res.data.regular);
+        if (
+          url.includes(
+            "vimeo.com"
+          ) &&
+          !url.includes(
+            "player.vimeo.com"
+          )
+        ) {
+          const id =
+            url
+              .split("/")
+              .pop();
 
-      setOndemandExercises(res.data.ondemand.data);
-      setPaginationOndemand(res.data.ondemand);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+          url = `https://player.vimeo.com/video/${id}`;
+        }
 
-  const fetchTrainingPlans = async (page: number = 1) => {
-    try {
-      const res = await API.get("/admin/training-plans", { params: { page } });
-      setTrainingPlans(res.data.data);
-      setTrainingPlansPagination(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+        return {
+          ...item,
+          id: Number(item.id),
+          video_url: url,
+        };
+      }
+    );
 
-  const handleDeleteExercise = async (id: number) => {
-    try {
-      await API.delete(`/admin/exercises/${id}`);
-      setRegularExercises((p) => p.filter((e) => e.id !== id));
-      setOndemandExercises((p) => p.filter((e) => e.id !== id));
-      toast.success("Exercise deleted");
-      setDeleteOpen(false);
-      window.location.reload(); // Temporary fix to refresh pagination after deletion
-    } catch {
-      toast.error("Delete failed");
-    }
-  };
+  // FETCH EXERCISES
+  const fetchExercises =
+    async (
+      page: number = 1,
+      refresh: boolean = true
+    ) => {
+      setLoading(true);
 
-  const openExerciseDetails = (exercise: Exercise) => {
-    setSelectedExercise(exercise);
-    setDetailsOpen(true);
-  };
+      try {
+        const res =
+          await API.get(
+            "/admin/exercises",
+            {
+              params: {
+                page,
+                refresh,
+              },
+            }
+          );
+
+        const {
+          regular,
+          ondemand,
+        } = res.data;
+
+        // Regular
+        setRegularExercises(
+          normalizeData(
+            regular.data
+          )
+        );
+
+        setPaginationRegular({
+          ...regular,
+          last_page:
+            regular.total_pages,
+        });
+
+        // Ondemand
+        setOndemandExercises(
+          normalizeData(
+            ondemand.data
+          )
+        );
+
+        setPaginationOndemand({
+          ...ondemand,
+          last_page:
+            ondemand.total_pages,
+        });
+
+        if (refresh) {
+          toast.success(
+            "Exercises refreshed successfully"
+          );
+        }
+      } catch (err) {
+        toast.error(
+          "Failed to sync data"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  // FETCH TRAINING PLANS
+  // const fetchTrainingPlans =
+  //   async (
+  //     page: number = 1
+  //   ) => {
+  //     try {
+  //       const res =
+  //         await API.get(
+  //           "/admin/training-plans",
+  //           {
+  //             params: {
+  //               page,
+  //             },
+  //           }
+  //         );
+
+  //       setTrainingPlans(
+  //         res.data.data
+  //       );
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   };
 
   useEffect(() => {
     fetchExercises();
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "training-plans" && trainingPlans.length === 0) {
-      fetchTrainingPlans();
-    }
-  }, [activeTab]);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center min-h-[60vh] items-center">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
-    );
-  }
+  // useEffect(() => {
+  //   if (
+  //     activeTab ===
+  //       "training-plans" &&
+  //     trainingPlans.length === 0
+  //   ) {
+  //     fetchTrainingPlans();
+  //   }
+  // }, [activeTab]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Exercises</h1>
-        <div className="flex gap-2">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-bold">
+          Exercise Management
+        </h1>
+
+        <div className="flex gap-2 flex-wrap">
+          {/* Refresh */}
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() =>
+              fetchExercises(
+                activeTab ===
+                  "regular"
+                  ? paginationRegular.current_page
+                  : paginationOndemand.current_page,
+                true
+              )
+            }
+            className="border-[#D32C86] text-[#D32C86] hover:bg-[#D32C86] hover:text-white"
+          >
+            <RefreshCcw
+              className={`h-4 w-4 mr-2 ${
+                loading
+                  ? "animate-spin"
+                  : ""
+              }`}
+            />
+            Refresh
+          </Button>
+
+          {/* Add Exercise */}
           <AddExerciseDialog
-            open={addExerciseDialogOpen}
-            onOpenChange={setAddExerciseDialogOpen}
-            onSuccess={() => fetchExercises(paginationRegular.current_page)}
-          />
-          <AddTrainingPlanDialog
-            open={addTrainingPlanDialogOpen}
-            onOpenChange={setAddTrainingPlanDialogOpen}
+            open={
+              addExerciseOpen
+            }
+            onOpenChange={
+              setAddExerciseOpen
+            }
             onSuccess={() =>
-              fetchTrainingPlans(trainingPlansPagination?.current_page || 1)
+              fetchExercises()
             }
           />
+
+          {/* Add Training Plan */}
+          {/* <AddTrainingPlanDialog
+            onSuccess={() =>
+              fetchTrainingPlans()
+            }
+          /> */}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-3">
-        {["regular", "ondemand", "training-plans"].map((tab) => (
+      {/* TABS */}
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            "regular",
+            "ondemand",
+            
+          ] as const
+        ).map((tab) => (
           <Button
             key={tab}
             variant="outline"
-            onClick={() => setActiveTab(tab as Tab)}
+            onClick={() => {
+              setActiveTab(
+                tab
+              );
+
+              setPlayingId(
+                null
+              );
+            }}
             className={
-              activeTab === tab ? "bg-[#D32C86] text-white" : ""
+              activeTab === tab
+                ? "bg-[#D32C86] text-white hover:bg-[#D32C86]/90 hover:text-white"
+                : ""
             }
           >
-            {tab === "regular"
-              ? "Exercises"
-              : tab === "ondemand"
-              ? "On Demand"
-              : "Training Plans"}
+           {tab === "regular"
+  ? "Exercises"
+  : "On Demand"}
           </Button>
         ))}
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {activeTab !== "training-plans" &&
-          (activeTab === "regular"
-            ? regularExercises
-            : ondemandExercises
-          ).map((ex) => (
-            <ExerciseCard
-              key={ex.id}
-              exercise={ex}
-              playingId={playingId}
-              onPlay={() => setPlayingId(ex.id)}
-              onView={() => openExerciseDetails(ex)}
-              onEdit={() => {
-                setEditingExercise(ex);
-                setEditOpen(true);
-              }}
-              onDelete={() => {
-                setDeletingId(ex.id);
-                setDeleteOpen(true);
-              }}
-            />
-          ))}
+      {/* LOADING */}
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="animate-spin h-8 w-8 text-[#D32C86]" />
+        </div>
+      ) : (
+        <>
+          {/* GRID */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Regular */}
+            {activeTab ===
+              "regular" &&
+              regularExercises.map(
+                (ex) => (
+                  <ExerciseCard
+                    key={ex.id}
+                    exercise={ex}
+                    playingId={
+                      playingId
+                    }
+                    onPlay={() =>
+                      setPlayingId(
+                        ex.id
+                      )
+                    }
+                    onView={() => {
+                      setSelectedExercise(
+                        ex
+                      );
 
-        {activeTab === "training-plans" &&
-          trainingPlans.map((plan) => (
-            <TrainingPlanCard
-              key={plan.id}
-              plan={plan}
-              onClick={() => setSelectedPlan(plan)}
-            />
-          ))}
-      </div>
+                      setDetailsOpen(
+                        true
+                      );
+                    }}
+                    onEdit={() => {
+                      setEditingExercise(
+                        ex
+                      );
 
-      {/* Pagination */}
-      {activeTab === "regular" && paginationRegular.last_page > 1 && (
-        <Pagination
-          currentPage={paginationRegular.current_page}
-          lastPage={paginationRegular.last_page}
-          hasNext={!!paginationRegular.next_page_url}
-          hasPrev={!!paginationRegular.prev_page_url}
-          onPageChange={(page) => {
-            void fetchExercises(page);
-          }}
-        />
+                      setEditOpen(
+                        true
+                      );
+                    }}
+                    onDelete={() => {
+                      setDeletingId(
+                        ex.id
+                      );
+
+                      setDeleteOpen(
+                        true
+                      );
+                    }}
+                  />
+                )
+              )}
+
+            {/* Ondemand */}
+            {activeTab ===
+              "ondemand" &&
+              ondemandExercises.map(
+                (ex) => (
+                  <ExerciseCard
+                    key={ex.id}
+                    exercise={ex}
+                    playingId={
+                      playingId
+                    }
+                    onPlay={() =>
+                      setPlayingId(
+                        ex.id
+                      )
+                    }
+                    onView={() => {
+                      setSelectedExercise(
+                        ex
+                      );
+
+                      setDetailsOpen(
+                        true
+                      );
+                    }}
+                    onEdit={() => {
+                      setEditingExercise(
+                        ex
+                      );
+
+                      setEditOpen(
+                        true
+                      );
+                    }}
+                    onDelete={() => {
+                      setDeletingId(
+                        ex.id
+                      );
+
+                      setDeleteOpen(
+                        true
+                      );
+                    }}
+                  />
+                )
+              )}
+
+            {/* Training Plans */}
+            {/* {activeTab ===
+              "training-plans" &&
+              trainingPlans.map(
+                (plan) => (
+                  <TrainingPlanCard
+                    key={plan.id}
+                    plan={plan}
+                    onClick={() =>
+                      setSelectedPlan(
+                        plan
+                      )
+                    }
+                  />
+                )
+              )} */}
+          </div>
+
+          {/* PAGINATION */}
+          {activeTab ===
+            "regular" &&
+            paginationRegular.last_page >
+              1 && (
+              <SmartPagination
+                currentPage={
+                  paginationRegular.current_page
+                }
+                lastPage={
+                  paginationRegular.last_page
+                }
+                onPageChange={
+                  fetchExercises
+                }
+              />
+            )}
+
+          {activeTab ===
+            "ondemand" &&
+            paginationOndemand.last_page >
+              1 && (
+              <SmartPagination
+                currentPage={
+                  paginationOndemand.current_page
+                }
+                lastPage={
+                  paginationOndemand.last_page
+                }
+                onPageChange={
+                  fetchExercises
+                }
+              />
+            )}
+        </>
       )}
 
-      {activeTab === "ondemand" && paginationOndemand.last_page > 1 && (
-        <Pagination
-          currentPage={paginationOndemand.current_page}
-          lastPage={paginationOndemand.last_page}
-          hasNext={!!paginationOndemand.next_page_url}
-          hasPrev={!!paginationOndemand.prev_page_url}
-          onPageChange={(page) => {
-            void fetchExercises(page);
-          }}
-        />
-      )}
-
-      {/* Exercise Details Modal */}
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-lg">
+      {/* DETAILS MODAL */}
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={
+          setDetailsOpen
+        }
+      >
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Exercise Details</DialogTitle>
+            <DialogTitle>
+              {
+                selectedExercise?.title
+              }
+            </DialogTitle>
           </DialogHeader>
 
           {selectedExercise && (
-  <div className="space-y-4">
+            <div className="space-y-4">
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                <iframe
+                  src={`${selectedExercise?.video_url}?autoplay=0&title=0&byline=0&portrait=0`}
+                  className="w-full h-full"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
 
-    {/* VIDEO (if exists) */}
-{/* {selectedExercise.url && (
-  <video
-    key={selectedExercise.id}
-    src={selectedExercise.url}
-    controls
-    className="w-full rounded-md"
-  />
-)} */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm">
+                  Description
+                </h4>
 
+                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                  {selectedExercise.description ||
+                    "No description available."}
+                </p>
 
+                <div className="flex gap-4 pt-4 text-xs font-medium border-t">
+                  <span>
+                    Level:{" "}
+                    {
+                      selectedExercise.level
+                    }
+                  </span>
 
-    {/* Exercise details */}
-    <div className="space-y-3 text-sm">
-    {(() => {
-      const detailKeys: Array<keyof Exercise> = [
-        "title",
-        "categories",
-        "level",
-        "tags",
-      ];
-      return detailKeys.map((key) => {
-        const value = (selectedExercise as Exercise)[key];
-        return (
-          <div key={String(key)} className="flex gap-2">
-            <span className="font-semibold capitalize">
-              {String(key).replace(/_/g, " ")}:
-            </span>
-            <span className="text-muted-foreground break-all">
-              {Array.isArray(value)
-                ? (value as any).join(", ")
-                : typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value)}
-            </span>
-          </div>
-        );
-      });
-    })()}
-</div>
-
-  </div>
-)}
-
+                  <span className="text-[#D32C86]">
+                    Category:{" "}
+                    {Array.isArray(
+                      selectedExercise.categories
+                    )
+                      ? selectedExercise.categories[0]
+                      : selectedExercise.categories}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* Other dialogs */}
+      {/* EDIT */}
       <EditExerciseDialog
         open={editOpen}
-        onOpenChange={setEditOpen}
-        exercise={editingExercise}
+        onOpenChange={
+          setEditOpen
+        }
+        exercise={
+          editingExercise
+        }
         onSuccess={() =>
           fetchExercises(
-            activeTab === "regular"
+            activeTab ===
+              "regular"
               ? paginationRegular.current_page
               : paginationOndemand.current_page
           )
         }
       />
 
+      {/* DELETE */}
       <DeleteExerciseDialog
         open={deleteOpen}
-        onOpenChange={setDeleteOpen}
+        onOpenChange={
+          setDeleteOpen
+        }
         onConfirm={async () => {
-          if (deletingId) {
-            await handleDeleteExercise(deletingId);
+          if (!deletingId)
+            return;
+
+          try {
+            await API.delete(
+              `/admin/exercises/${deletingId}`
+            );
+
+            toast.success(
+              "Deleted successfully"
+            );
+
+            setDeleteOpen(
+              false
+            );
+
+            fetchExercises();
+          } catch {
+            toast.error(
+              "Failed to delete"
+            );
           }
         }}
       />
 
-      <TrainingPlanModal
+      {/* TRAINING PLAN MODAL */}
+      {/* <TrainingPlanModal
         plan={selectedPlan}
-        onClose={() => setSelectedPlan(null)}
-        onAddExercise={(plan) => {
-          setPlanForExercise(plan);
-          setAddExerciseToTrainingPlanDialogOpen(true);
-        }}
-      />
-
-      <AddExerciseToTrainingPlanDialog
-        open={addExerciseToTrainingPlanDialogOpen}
-        onOpenChange={setAddExerciseToTrainingPlanDialogOpen}
-        plan={planForExercise}
-        onSuccess={() =>
-          fetchTrainingPlans(trainingPlansPagination?.current_page || 1)
+        onClose={() =>
+          setSelectedPlan(
+            null
+          )
         }
-      />
+        onAddExercise={(
+          plan
+        ) => {
+          console.log(
+            "Add exercise to",
+            plan
+          );
+        }}
+      /> */}
     </div>
   );
 }

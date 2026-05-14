@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +12,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 
 /* ================= TYPES ================= */
 
 interface User {
   id: number;
-  uid: string;
   name: string;
   email: string;
-  avatar: string;
-  address: string;
-  is_deactivate: boolean;
+  registered: string;
+  roles: string;
 }
 
 interface DataTableProps {
@@ -55,9 +45,6 @@ export function DataTable({
 }: DataTableProps) {
   const router = useRouter();
 
-  // 🛡 Safety guard
-  const safePageSize = pageSize ?? 15;
-
   return (
     <div className="w-full space-y-4">
       <div className="rounded-md border">
@@ -65,8 +52,8 @@ export function DataTable({
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              {/* <TableHead>Address</TableHead> */}
-              <TableHead>Status</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Registered</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,19 +62,20 @@ export function DataTable({
             {users.length ? (
               users.map((user) => (
                 <TableRow key={user.id}>
+                  {/* USER INFO */}
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage className="object-cover"
-                          src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${user.avatar}`}
-                          alt={user.name}
-                        />
                         <AvatarFallback className="text-xs font-medium">
                           {user.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
+
                       <div className="flex flex-col">
-                        <span className="font-medium">{user.name}</span>
+                        <span className="font-medium">
+                          {user.name}
+                        </span>
+
                         <span className="text-sm text-muted-foreground">
                           {user.email}
                         </span>
@@ -95,22 +83,32 @@ export function DataTable({
                     </div>
                   </TableCell>
 
-                  {/* <TableCell>
-                    {user.address || "Not Provided"}
-                  </TableCell> */}
-
+                  {/* ROLE */}
                   <TableCell>
-                    <Badge variant="secondary">
-                      {user.is_deactivate ? "Inactive" : "Active"}
+                    <Badge
+                      variant="secondary"
+                      className="capitalize"
+                    >
+                      {user.roles}
                     </Badge>
                   </TableCell>
 
+                  {/* REGISTERED */}
+                  <TableCell>
+                    {new Date(
+                      user.registered
+                    ).toLocaleDateString()}
+                  </TableCell>
+
+                  {/* ACTIONS */}
                   <TableCell>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() =>
-                        router.push(`/dashboard/users/${user.uid}`)
+                        router.push(
+                          `/dashboard/users/${user.id}`
+                        )
                       }
                     >
                       <Eye className="size-4" />
@@ -120,8 +118,11 @@ export function DataTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  No results.
+                <TableCell
+                  colSpan={4}
+                  className="h-24 text-center"
+                >
+                  No users found.
                 </TableCell>
               </TableRow>
             )}
@@ -129,44 +130,35 @@ export function DataTable({
         </Table>
       </div>
 
-      {/* ===== Pagination Controls ===== */}
+      {/* ================= PAGINATION ================= */}
+
       <div className="flex items-center justify-end py-4">
-        {/* <div className="flex items-center gap-2">
-          <Label>Show</Label>
-          <Select
-            value={safePageSize.toString()}
-            onValueChange={(v) => onPageSizeChange(Number(v))}
-          >
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="15">15</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-        </div> */}
+        
 
         <div className="flex items-center gap-2">
+          {/* PREVIOUS */}
           <Button
             size="sm"
             variant="outline"
             disabled={currentPage === 1}
-            onClick={() => onPageChange(currentPage - 1)}
+            onClick={() =>
+              onPageChange(currentPage - 1)
+            }
           >
             Previous
           </Button>
+          <div className="text-sm text-muted-foreground">
+          Page {currentPage} of {lastPage}
+        </div>
 
-          <span className="text-sm">
-            Page {currentPage} of {lastPage}
-          </span>
-
+          {/* NEXT */}
           <Button
             size="sm"
             variant="outline"
             disabled={currentPage === lastPage}
-            onClick={() => onPageChange(currentPage + 1)}
+            onClick={() =>
+              onPageChange(currentPage + 1)
+            }
           >
             Next
           </Button>

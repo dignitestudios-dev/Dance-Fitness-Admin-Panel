@@ -58,24 +58,25 @@ export default function SessionDetailsPage() {
     fetchSessionDetails();
   }, [sessionId, userId]);
 
-  const fetchSessionDetails = async () => {
-    try {
-      const res = await API.get(
-        "/admin/user/sessions/session-details",
-        {
-          params: {
-            user_uid: userId,
-            session_id: sessionId,
-          },
-        }
-      );
-      setSession(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const fetchSessionDetails = async () => {
+  try {
+    const res = await API.get(
+      "/admin/user/sessions/session-details",
+      {
+        params: {
+          user_id: userId,
+          session_id: sessionId,
+        },
+      }
+    );
+
+    setSession(res.data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading) {
     return (

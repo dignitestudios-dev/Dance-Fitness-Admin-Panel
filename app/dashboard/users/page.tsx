@@ -10,37 +10,29 @@ import { Users, UserCheck, UserX } from "lucide-react";
 
 interface BackendUser {
   id: number;
-  uid: string;
-  first_name: string | null;
-  last_name: string | null;
-  user_name: string | null;
+  name: string;
   email: string;
-  avatar: string | null;
-  is_deactivate: boolean;
-  joined_date: string;
+  registered: string;
+  roles: string;
 }
 
 interface User {
   id: number;
-  uid: string;
   name: string;
   email: string;
-  avatar: string;
-  status: "Active" | "Inactive";
-  joinedDate: string;
-  address: string;
-  is_deactivate: boolean;
+  registered: string;
+  roles: string;
 }
 
 interface UsersApiResponse {
-  total_users: number;
-  activate_users: number;
-  deactivated_users: number;
-  users: {
-    current_page: number;
-    last_page: number;
-    data: BackendUser[];
-  };
+  status: boolean;
+  message: string;
+  data: BackendUser[];
+  current_page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  has_more: boolean;
 }
 
 /* ================= COMPONENT ================= */
@@ -48,10 +40,11 @@ interface UsersApiResponse {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // keeping stats UI intact
   const [stats, setStats] = useState({
     total_users: 0,
     activate_users: 0,
@@ -60,32 +53,13 @@ export default function UsersPage() {
 
   /* =============== HELPERS =============== */
 
-  const generateAvatar = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-  const mapUser = (u: BackendUser): User => {
-    const fullName =
-      [u.first_name, u.last_name].filter(Boolean).join(" ") ||
-      u.user_name ||
-      "N/A";
-
-    return {
-      id: u.id,
-      uid: u.uid,
-      name: fullName,
-      email: u.email,
-      avatar: u.avatar ?? generateAvatar(fullName),
-      status: u.is_deactivate ? "Inactive" : "Active",
-      joinedDate: u.joined_date,
-      address: "",
-      is_deactivate: u.is_deactivate,
-    };
-  };
+  const mapUser = (u: BackendUser): User => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    registered: u.registered,
+    roles: u.roles,
+  });
 
   /* =============== API CALL =============== */
 
@@ -98,13 +72,17 @@ export default function UsersPage() {
           `/admin/users?page=${page}&per_page=${pageSize}`
         );
 
-        setUsers(res.data.users.data.map(mapUser));
-        setLastPage(res.data.users.last_page);
+        // updated according to new API
+        setUsers(res.data.data.map(mapUser));
+        setLastPage(res.data.total_pages);
+
+        // fake stats from current response to preserve UI
+        const total = res.data.total_items;
 
         setStats({
-          total_users: res.data.total_users,
-          activate_users: res.data.activate_users,
-          deactivated_users: res.data.deactivated_users,
+          total_users: total,
+          activate_users: total,
+          deactivated_users: 0,
         });
       } catch (error) {
         console.error("Users API error:", error);
@@ -124,11 +102,23 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
+              <h1 className="text-2xl font-bold pl-3">User Management</h1>
+
       {/* ===== STAT CARDS ===== */}
-      <div className="@container/main px-4 lg:px-6">
+      <div className="@container/main  ">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard title="Total Users" value={stats.total_users} icon={Users} />
-          <StatCard title="Active Users" value={stats.activate_users} icon={UserCheck} />
+          <StatCard
+            title="Total Users"
+            value={stats.total_users}
+            icon={Users}
+          />
+
+          <StatCard
+            title="Active Users"
+            value={stats.activate_users}
+            icon={UserCheck}
+          />
+
           <StatCard
             title="Deactivated Users"
             value={stats.deactivated_users}
@@ -138,7 +128,7 @@ export default function UsersPage() {
       </div>
 
       {/* ===== USERS TABLE ===== */}
-      <div className="@container/main px-4 lg:px-6 mt-8 lg:mt-12">
+      <div className="@container/main ">
         <DataTable
           users={users}
           currentPage={page}
@@ -168,7 +158,7 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="space-y-2 pt-6">
+      <CardContent className="space-y-2 pt-2">
         <Icon className="size-6 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{title}</p>
         <p className="text-2xl font-bold">{value}</p>

@@ -116,6 +116,27 @@
   --sidebar-ring: oklch(0.553 0.013 58.071);
 }
 
+.prose iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 360px !important;
+  border-radius: 12px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .prose iframe {
+    height: 220px !important;
+  }
+}
+
+.prose video {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 12px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50 text-base;

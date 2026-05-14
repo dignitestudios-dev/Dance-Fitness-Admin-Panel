@@ -73,6 +73,11 @@ const data = {
           url: "/dashboard/excercise",
           icon: DumbbellIcon,
         },
+        {
+          title: "Training Plans",
+          url: "/dashboard/training-plans",
+          icon: DumbbellIcon,
+        },
          {
           title: "Products",
           url: "/dashboard/products",

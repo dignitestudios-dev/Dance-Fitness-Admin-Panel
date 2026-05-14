@@ -49,7 +49,7 @@ const Login = () => {
         <div className="space-y-2">
           <Label>Email</Label>
           <Input
-            type="email"
+            type="text"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

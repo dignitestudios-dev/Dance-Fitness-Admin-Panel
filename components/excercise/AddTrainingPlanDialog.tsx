@@ -1,14 +1,37 @@
+"use client";
+
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { API } from "@/lib/api/axios";
 import { toast } from "sonner";
+
 import CategorySelector from "./CategorySelector";
-import { ALL_CATEGORIES, LEVELS } from "./constants";
+import TagSelector from "./TagSelector";
+
+import { ALL_CATEGORIES, ALL_TAGS, LEVELS } from "./constants";
 import { toggleArrayItem } from "./utils";
 
 interface AddTrainingPlanDialogProps {
@@ -23,62 +46,99 @@ export default function AddTrainingPlanDialog({
   onSuccess,
 }: AddTrainingPlanDialogProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [planTitle, setPlanTitle] = useState("");
-  const [planDescription, setPlanDescription] = useState("");
-  const [planCategories, setPlanCategories] = useState<string[]>([]);
-  const [planLevel, setPlanLevel] = useState("");
-  const [planCoverImage, setPlanCoverImage] = useState<File | null>(null);
 
-  const handlePlanCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setPlanCoverImage(e.target.files[0]);
-  };
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [categories, setCategories] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [level, setLevel] = useState("");
+
+  const [exerciseIds, setExerciseIds] = useState<number[]>([]);
+
+  const [showOnSite, setShowOnSite] = useState(true);
+  const [exerciseIdsInput, setExerciseIdsInput] = useState("");
 
   const resetForm = () => {
-    setPlanTitle("");
-    setPlanDescription("");
-    setPlanCategories([]);
-    setPlanLevel("");
-    setPlanCoverImage(null);
+    setTitle("");
+    setDescription("");
+    setCategories([]);
+    setTags([]);
+    setLevel("");
+    setExerciseIds([]);
+    setShowOnSite(true);
   };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  if (
+    !title ||
+    !description ||
+    !level ||
+    categories.length === 0 ||
+    tags.length === 0
+  ) {
+    toast.error("Please fill all required fields");
+    return;
+  }
 
-    if (!planTitle || !planLevel || planCategories.length === 0 || !planCoverImage || !planDescription) {
-      toast.error("Please fill all required fields!");
-      return;
-    }
+  setSubmitting(true);
 
-    setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("title", planTitle);
-      formData.append("description", planDescription);
-      planCategories.forEach((c) => formData.append("categories[]", c));
-      formData.append("level", planLevel);
-      formData.append("cover_image", planCoverImage as Blob);
+  try {
+    const formData = new FormData();
 
-      await API.post("/admin/training-plans/create", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("level", level);
+    formData.append("show_on_site", String(showOnSite));
 
-      toast.success("Training plan created successfully!");
-      resetForm();
-      onOpenChange(false);
-      onSuccess();
-    } catch (err) {
-      console.error("Failed to create training plan:", err);
-      toast.error("Failed to create training plan");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    categories.forEach((c) =>
+      formData.append("categories[]", c)
+    );
+
+    tags.forEach((t) =>
+      formData.append("tags[]", t)
+    );
+
+    // ✅ FIX: convert input → array here
+    const parsedExerciseIds = exerciseIdsInput
+      .split(",")
+      .map((id) => Number(id.trim()))
+      .filter((id) => !isNaN(id) && id > 0);
+
+    parsedExerciseIds.forEach((id) =>
+      formData.append("exercises[]", String(id))
+    );
+
+    await API.post(
+      "/admin/training-plans/create",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    toast.success("Training plan created!");
+
+    resetForm();
+    onOpenChange(false);
+    onSuccess();
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to create training plan");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="ml-2">
-          <Plus className="mr-2 h-4 w-4" /> Add Training Plan
+        <Button variant="outline">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Training Plan
         </Button>
       </DialogTrigger>
 
@@ -87,47 +147,93 @@ export default function AddTrainingPlanDialog({
           <DialogTitle>Create Training Plan</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-1 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* TITLE */}
           <Input
             placeholder="Title"
-            value={planTitle}
-            onChange={(e) => setPlanTitle(e.target.value)}
-            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
 
-          <CategorySelector
-            categories={ALL_CATEGORIES}
-            selectedCategories={planCategories}
-            onToggle={(cat) => toggleArrayItem(cat, planCategories, setPlanCategories)}
-          />
-
-          <Select value={planLevel} onValueChange={setPlanLevel} required>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select Level" />
-            </SelectTrigger>
-            <SelectContent className="w-full">
-              {LEVELS.map((lvl) => (
-                <SelectItem key={lvl} value={lvl}>
-                  {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+          {/* DESCRIPTION */}
           <Textarea
             placeholder="Description"
-            value={planDescription}
-            onChange={(e) => setPlanDescription(e.target.value)}
-            required
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
 
-          <div>
-            <div className="text-sm font-medium mb-1">Cover Image</div>
-            <Input type="file" accept="image/*" onChange={handlePlanCoverImageChange} required />
+
+          {/* CATEGORY (IDENTICAL TO EXERCISE MODAL) */}
+          <CategorySelector
+            categories={ALL_CATEGORIES}
+            selectedCategories={categories}
+            onToggle={(cat) =>
+              toggleArrayItem(cat, categories, setCategories)
+            }
+          />
+
+          {/* TAGS (IDENTICAL COMPONENT) */}
+          <TagSelector
+            tags={ALL_TAGS}
+            selectedTags={tags}
+            onToggle={(tag) =>
+              toggleArrayItem(tag, tags, setTags)
+            }
+          />
+
+          {/* EXERCISE IDS (same style as Video ID) */}
+<div>
+  <div className="text-sm font-medium mb-2">
+    Exercise IDs
+  </div>
+
+  <Input
+    placeholder="e.g. 12, 45, 78"
+    value={exerciseIdsInput}
+    onChange={(e) => setExerciseIdsInput(e.target.value)}
+  />
+
+  <p className="text-xs text-muted-foreground mt-1">
+    Enter comma-separated exercise IDs (same style as Video ID input)
+  </p>
+</div>
+
+          {/* LEVEL (IDENTICAL STYLE) */}
+         <Select value={level} onValueChange={setLevel}>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder="Select Level" />
+  </SelectTrigger>
+
+  <SelectContent>
+    {LEVELS.map((lvl) => (
+      <SelectItem key={lvl} value={lvl}>
+        {lvl}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
+          {/* SHOW ON SITE */}
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <label className="text-sm font-medium">
+              Show on Site
+            </label>
+
+            <Checkbox
+              checked={showOnSite}
+              onCheckedChange={(checked) =>
+                setShowOnSite(!!checked)
+              }
+            />
           </div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Creating..." : "Create Plan"}
+          {/* SUBMIT */}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting}
+          >
+            {submitting ? "Creating..." : "Create Training Plan"}
           </Button>
         </form>
       </DialogContent>

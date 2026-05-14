@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { API } from "@/lib/api/axios";
-import { Loader2, Eye, Trash2, Plus, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Loader2,
+  Package2,
+  Plus,
+  FolderKanban,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,313 +24,475 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
-interface Product {
+interface Category {
   id: number;
-  title: string;
+  name: string;
+  slug: string;
+  parent: number;
   description: string;
-  amount: string;
-  discount: string;
-  stock: number;
-  image: string;
-  category: string;
-  created_at: string;
+  display: string;
+  menu_order: number;
+  count: number;
+
+  image?: {
+    id: number;
+    src: string;
+    name: string;
+    alt: string;
+  };
 }
 
-interface PaginatedProducts {
-  current_page: number;
-  data: Product[];
-  last_page: number;
-  next_page_url: string | null;
-  prev_page_url: string | null;
-}
-
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function ProductCategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [pagination, setPagination] = useState<PaginatedProducts>({
-    current_page: 1,
-    data: [],
-    last_page: 1,
-    next_page_url: null,
-    prev_page_url: null,
-  });
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  // View
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const router = useRouter();
 
-  // Delete
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  /* ================= ADD PRODUCT FORM ================= */
 
-  // Add / Edit
-  const [formOpen, setFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+  name: "",
+  regular_price: "",
+  stock_quantity: "",
+  description: "",
+  short_description: "",
+  category_id: "",
+  image: null as File | null,
+});
 
-  // Form state
-  const [editId, setEditId] = useState<number | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [stock, setStock] = useState("");
-  const [category, setCategory] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  /* ================= FETCH CATEGORIES ================= */
 
-  const categories = [
-    "Tools for designers",
-    "Tools for teachers",
-    "Guides and training plans",
-    "Team and group training",
-    "Virtual trainings and recordings",
-  ];
-
-  /* ---------------- FETCH PRODUCTS ---------------- */
-  const fetchProducts = async (page: number = 1) => {
-    setLoading(true);
+  const fetchCategories = async () => {
     try {
-      const res = await API.get("/admin/products", { params: { page } });
-      setProducts(res.data.data);
-      setPagination({
-        current_page: res.data.current_page,
-        data: res.data.data,
-        last_page: res.data.last_page,
-        next_page_url: res.data.next_page_url,
-        prev_page_url: res.data.prev_page_url,
-      });
+      const res = await API.get(
+        "/admin/product/categories"
+      );
+
+      setCategories(res.data);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "Failed to fetch categories:",
+        err
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  /* ---------------- VIEW DETAILS ---------------- */
-  const fetchProductDetails = async (id: number) => {
-    setDetailsOpen(true);
-    setDetailsLoading(true);
-    try {
-      const res = await API.get(`/admin/products/${id}`);
-      setSelectedProduct(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
+  /* ================= ADD PRODUCT ================= */
 
-  /* ---------------- DELETE ---------------- */
-  const handleDeleteProduct = async () => {
-    if (!deleteId) return;
-    setDeleting(true);
-    try {
-      await API.delete(`/admin/products/${deleteId}`);
-      setProducts((prev) => prev.filter((p) => p.id !== deleteId));
-      setDeleteOpen(false);
-      setDeleteId(null);
-    } catch {
-      alert("Failed to delete product");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  /* ---------------- ADD / EDIT ---------------- */
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSubmitting(true);
-
+  const handleAddProduct = async () => {
   try {
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", parseInt(price, 10).toString()); // ✅ FIX
-    formData.append("stock", parseInt(stock, 10).toString()); // ✅ FIX
-    formData.append("category", category);
-    formData.append("discount_per", "0"); // ✅ required by backend
+    setCreating(true);
 
+    const data = new FormData();
 
-    if (imageFile) {
-      formData.append("image", imageFile);
+    data.append("name", formData.name);
+    data.append(
+      "regular_price",
+      formData.regular_price
+    );
+    data.append(
+      "stock_quantity",
+      formData.stock_quantity
+    );
+    data.append(
+      "description",
+      formData.description
+    );
+    data.append(
+      "short_description",
+      formData.short_description
+    );
+
+    data.append(
+      "categories[0][id]",
+      formData.category_id
+    );
+
+    // IMAGE
+    if (formData.image) {
+      data.append("image", formData.image);
     }
 
-    if (isEditing && editId) {
-      await API.post(`/admin/products/${editId}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    } else {
-      await API.post("/admin/add-product", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    }
+    await API.post(
+  "/admin/add-product",
+  data,
+  {
+    headers: {
+      "Content-Type":
+        "multipart/form-data",
+    },
+  }
+);
 
-    setFormOpen(false);
-    resetForm();
-    fetchProducts(pagination.current_page);
+// CLOSE MODAL
+setOpen(false);
+
+// RESET FORM
+setFormData({
+  name: "",
+  regular_price: "",
+  stock_quantity: "",
+  description: "",
+  short_description: "",
+  category_id: "",
+  image: null,
+});
+
+// SUCCESS TOAST
+toast.success("Product added successfully");
+
+    setOpen(false);
+
+    setFormData({
+      name: "",
+      regular_price: "",
+      stock_quantity: "",
+      description: "",
+      short_description: "",
+      category_id: "",
+      image: null,
+    });
+
+    toast.success("Product added successfully");
   } catch (err) {
-    alert("Failed to save product");
+    console.error(
+      "Failed to add product:",
+      err
+    );
   } finally {
-    setSubmitting(false);
+    setCreating(false);
   }
 };
 
-
-  const resetForm = () => {
-    setEditId(null);
-    setIsEditing(false);
-    setTitle("");
-    setDescription("");
-    setPrice("");
-    setStock("");
-    setCategory("");
-    setImageFile(null);
-  };
-
-  const openEdit = (p: Product) => {
-    setIsEditing(true);
-    setEditId(p.id);
-    setTitle(p.title);
-    setDescription(p.description);
-    setPrice(p.amount);
-    setStock(p.stock.toString());
-    setCategory(p.category);
-    setFormOpen(true);
-  };
+  /* ================= INITIAL LOAD ================= */
 
   useEffect(() => {
-    fetchProducts();
+    fetchCategories();
   }, []);
+
+  /* ================= LOADING ================= */
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin h-8 w-8 text-[#D32C86]" />
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Products</h1>
+  /* ================= UI ================= */
 
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+  return (
+    <div className="space-y-8">
+      {/* HEADER */}
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Product Categories
+          </h1>
+
+          <p className="text-muted-foreground mt-1">
+            Manage categories and products
+          </p>
+        </div>
+
+        {/* ADD PRODUCT MODAL */}
+
+        <Dialog
+          open={open}
+          onOpenChange={setOpen}
+        >
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="h-4 w-4 mr-1" /> Add Product
+            <Button className="bg-[#D32C86] hover:bg-[#b62572]">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
             </Button>
           </DialogTrigger>
 
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{isEditing ? "Edit Product" : "Add Product"}</DialogTitle>
+              <DialogTitle>
+                Add New Product
+              </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" required />
-              <Input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="Price" required />
-              <Input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Stock" required />
+            <div className="space-y-5">
+              {/* PRODUCT NAME */}
 
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-2 border rounded-md"
-                required
-              >
-                <option value="" disabled>Select Category</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <Label>
+                  Product Name
+                </Label>
 
-              <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                <Input
+                  placeholder="Testing Product"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </div>
 
-              <Button type="submit" disabled={submitting} className="w-full">
-                {submitting ? "Saving..." : isEditing ? "Update Product" : "Create Product"}
-              </Button>
-            </form>
+              {/* PRICE & STOCK */}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    Regular Price
+                  </Label>
+
+                  <Input
+                    type="number"
+                    placeholder="10"
+                    value={
+                      formData.regular_price
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        regular_price:
+                          e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Stock Quantity
+                  </Label>
+
+                  <Input
+                    type="number"
+                    placeholder="50"
+                    value={
+                      formData.stock_quantity
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        stock_quantity:
+                          e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* CATEGORY */}
+
+              <div className="space-y-2">
+                <Label>Category</Label>
+
+                <select
+                  className="w-full h-10 border rounded-md px-3 text-sm bg-background"
+                  value={formData.category_id}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      category_id:
+                        e.target.value,
+                    })
+                  }
+                >
+                  <option value="">
+                    Select Category
+                  </option>
+
+                  {categories.map(
+                    (category) => (
+                      <option
+                        key={category.id}
+                        value={category.id}
+                      >
+                        {category.name}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* PRODUCT IMAGE */}
+
+<div className="space-y-2">
+  <Label>Product Image</Label>
+
+  <Input
+    type="file"
+    accept="image/*"
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        image:
+          e.target.files?.[0] || null,
+      })
+    }
+  />
+</div>
+
+              {/* DESCRIPTION */}
+
+              <div className="space-y-2">
+                <Label>
+                  Description
+                </Label>
+
+                <Textarea
+                  rows={5}
+                  placeholder="Product description..."
+                  value={
+                    formData.description
+                  }
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description:
+                        e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {/* SHORT DESCRIPTION */}
+
+              <div className="space-y-2">
+                <Label>
+                  Short Description
+                </Label>
+
+                <Textarea
+                  rows={3}
+                  placeholder="Short description..."
+                  value={
+                    formData.short_description
+                  }
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      short_description:
+                        e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setOpen(false)
+                  }
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  onClick={
+                    handleAddProduct
+                  }
+                  disabled={creating}
+                  className="bg-[#D32C86] hover:bg-[#b62572]"
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {products.map((p) => (
-          <Card key={p.id}>
-            <CardHeader className="p-0">
-              <img
-                src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${p.image}`}
-                className="w-full h-40 object-contain"
-              />
-            </CardHeader>
+      {/* CATEGORY GRID */}
 
-            <CardContent className="space-y-2">
-              <h2 className="font-semibold text-sm truncate">{p.title}</h2>
-              <p className="text-xs text-muted-foreground line-clamp-3">{p.description}</p>
-              <div className="flex justify-between">
-                <span className="font-bold">${p.amount}</span>
-                {/* <Badge>{p.category}</Badge> */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {categories.map((category) => (
+          <Card
+            key={category.id}
+            onClick={() =>
+              router.push(
+                `/dashboard/products/by-category/${category.id}`
+              )
+            }
+            className="group overflow-hidden border cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+          >
+            {/* IMAGE */}
+
+            <div className="relative h-52 overflow-hidden bg-muted">
+              {category.image?.src ? (
+                <img
+                  src={
+                    category.image.src
+                  }
+                  alt={category.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <FolderKanban className="h-12 w-12 text-muted-foreground" />
+                </div>
+              )}
+
+              <div className="absolute top-3 right-3">
+                <Badge className="bg-black/70 text-white border-none">
+                  {category.count} Products
+                </Badge>
               </div>
-              <p className="text-xs">Stock: {p.stock}</p>
+            </div>
 
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => fetchProductDetails(p.id)}>
-                  <Eye className="h-4 w-4 " /> 
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
-                  <Pencil className="h-4 w-4" /> 
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => { setDeleteId(p.id); setDeleteOpen(true); }}>
-                  <Trash2 className="h-4 w-4 " /> 
+            {/* CONTENT */}
+
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <h2 className="font-bold text-xl line-clamp-1">
+                  {category.name}
+                </h2>
+
+                <p className="text-sm text-muted-foreground mt-1">
+                  {category.slug}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package2 className="h-4 w-4" />
+                  {category.count} Items
+                </div>
+
+                <Button
+                  size="sm"
+                  className="bg-[#D32C86] hover:bg-[#b62572]"
+                >
+                  View Products
                 </Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-
-      {/* Delete */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
-          </DialogHeader>
-          <p>Are you sure?</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteProduct}>
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View */}
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent>
-          {detailsLoading ? (
-            <Loader2 className="animate-spin mx-auto" />
-          ) : selectedProduct && (
-            <div className="space-y-3">
-              <img
-                src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${selectedProduct.image}`}
-                className="w-full h-48 object-contain"
-              />
-              <h2 className="font-bold">{selectedProduct.title}</h2>
-              <p>{selectedProduct.description}</p>
-                            <p>Stock: {selectedProduct.stock}</p>
-
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -5,10 +5,15 @@ export interface Exercise {
   level: string;
   tags: string | null;
   url: string;
+  video_url: string | null;
+  video?: string | null;
   thumbnail: string | null;
+  thumbnail_url?: string | null;
   type: "ondemand" | "regular";
   description?: string;
   equipment?: string[];
+  show_on_home_page?: boolean;
+  show_on_watch_on_demand?: boolean;
 }
 
 export interface PaginatedExercises {

@@ -19,20 +19,26 @@ export default function TagSelector({
       <div className="text-sm font-medium mb-1">{label}</div>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full text-left">
-            {selectedTags.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {selectedTags.map((t) => (
-                  <span key={t} className="text-xs px-2 py-0.5 rounded bg-[#D32C86] text-white">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              "Select Tags"
-            )}
-          </Button>
-        </PopoverTrigger>
+  <Button
+    variant="outline"
+    className="w-full min-h-[42px] h-auto justify-start text-left overflow-hidden"
+  >
+    {selectedTags.length > 0 ? (
+      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto w-full">
+        {selectedTags.map((t) => (
+          <span
+            key={t}
+            className="text-xs px-2 py-0.5 rounded bg-[#D32C86] text-white whitespace-nowrap"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+    ) : (
+      "Select Tags"
+    )}
+  </Button>
+</PopoverTrigger>
         <PopoverContent>
           <div className="grid gap-2 max-h-48 overflow-auto">
             {tags.map((tag) => (

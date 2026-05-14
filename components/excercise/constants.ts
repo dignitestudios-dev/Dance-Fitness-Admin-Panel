@@ -35,7 +35,7 @@ export const ALL_TAGS = [
   "Upper Body",
 ];
 
-export const LEVELS = ["beginner", "intermediate", "advanced"];
+export const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 export const EXERCISE_TYPES = {
   ONDEMAND: "ondemand" as const,

@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  Eye,
+  Loader2,
+  Mail,
+  Calendar,
+  User as UserIcon,
+} from "lucide-react";
 import { API } from "@/lib/api/axios";
-import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -45,47 +51,57 @@ import {
 
 /* ================= TYPES ================= */
 
-interface Paginated<T> {
-  data: T[];
-  total: number;
-}
-
-interface TrainingPlan {
-  id: number;
+interface Collection {
+  id: string;
   title: string;
-  total_exercises: number;
-  level: string;
+  exercise_count: number;
+  level: string | null;
+  created_at: string | null;
 }
 
 interface Session {
   id: number;
   title: string;
-  start_date: string;
-  end_date: string;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 interface Order {
   id: number;
   total_items: number;
-  total_amount: number;
+  total_amount: string;
   status: string;
+  ordered_date: string | null;
 }
 
 interface UserDetails {
-  user_id: number;
-  user_uid: string;
-  user_name: string | null;
+  id: number;
   first_name: string | null;
   last_name: string | null;
+  user_name: string | null;
   email: string;
-  avatar: string | null;
-  location: string;
-  is_deactivate: boolean;
-  spent_amount: number;
-  training_plans: Paginated<TrainingPlan>;
-  sessions: Paginated<Session>;
-  orders: Paginated<Order>;
+  role: string;
+  registered_at: string | null;
+  avatar?: string | null;
+  is_deactivate?: boolean;
+
+  collections?: {
+    data?: Collection[];
+    total_items?: number;
+  };
+
+  sessions?: {
+    data?: Session[];
+    total?: number;
+  };
+
+  orders?: Order[];
 }
+
+/* ================= HELPERS ================= */
+
+const safeDate = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString() : "N/A";
 
 /* ================= COMPONENT ================= */
 
@@ -105,7 +121,25 @@ export default function UserDetailsPage() {
     const fetchUserDetails = async () => {
       try {
         const res = await API.get(`/admin/user-details/${uid}`);
-        setUser(res.data);
+
+        // ✅ NORMALIZE RESPONSE SAFELY
+        const safeUser: UserDetails = {
+          ...res.data,
+
+          collections: {
+            data: res.data?.collections?.data ?? [],
+            total_items: res.data?.collections?.total_items ?? 0,
+          },
+
+          sessions: {
+            data: res.data?.sessions?.data ?? [],
+            total: res.data?.sessions?.total ?? 0,
+          },
+
+          orders: res.data?.orders ?? [],
+        };
+
+        setUser(safeUser);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load user details");
@@ -117,50 +151,61 @@ export default function UserDetailsPage() {
     fetchUserDetails();
   }, [uid]);
 
-  const handleDeactivate = async () => {
+  const handleToggleStatus = async () => {
     if (!user) return;
+
+    const isCurrentlyDeactivated = user.is_deactivate;
+    const endpoint = isCurrentlyDeactivated
+      ? "reactive-user"
+      : "deactivate-user";
 
     try {
       setActionLoading(true);
-      await API.post(`/admin/deactivate-user/${user.user_id}`);
-      setUser({ ...user, is_deactivate: true });
-      toast.success("User deactivated successfully");
+
+      await API.post(`/admin/${endpoint}/${user.id}`);
+
+      setUser({
+        ...user,
+        is_deactivate: !isCurrentlyDeactivated,
+      });
+
+      toast.success(
+        `User ${
+          isCurrentlyDeactivated ? "reactivated" : "deactivated"
+        } successfully`
+      );
     } catch {
-      toast.error("Failed to deactivate user");
+      toast.error("Failed to update user status");
     } finally {
       setActionLoading(false);
+      setConfirmOpen(false);
     }
   };
 
-  const handleReactivate = async () => {
-    if (!user) return;
-
-    try {
-      setActionLoading(true);
-      await API.post(`/admin/reactive-user/${user.user_id}`);
-      setUser({ ...user, is_deactivate: false });
-      toast.success("User reactivated successfully");
-    } catch {
-      toast.error("Failed to reactivate user");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  /* ================= LOADING ================= */
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!user) {
-    return <p className="text-destructive">Failed to load user details</p>;
+    return (
+      <p className="p-8 text-center text-destructive font-medium">
+        User record not found.
+      </p>
+    );
   }
 
+  /* ================= SAFE VALUES ================= */
+
   const fullName =
-    [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+    [user.first_name, user.last_name]
+      .filter(Boolean)
+      .join(" ") ||
     user.user_name ||
     "N/A";
 
@@ -168,174 +213,189 @@ export default function UserDetailsPage() {
     .split(" ")
     .map((n) => n[0])
     .join("")
-    .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase()
+    .slice(0, 2);
+
+  /* ================= UI ================= */
 
   return (
-    <div className="space-y-6">
-      {/* ===== USER HEADER ===== */}
-      <Card>
-        <CardContent className="flex items-center justify-between gap-6  flex-wrap">
-          <div className="flex items-center gap-6">
-            <Avatar className="h-20 w-20">
- <AvatarImage className="object-cover"
-                          src={`https://dancer-fitness-bucket.s3.us-east-2.amazonaws.com/${user.avatar}`}
-                        />
-                       <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
+    <div className="space-y-8 p-2">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-5">
+          <Avatar className="h-24 w-24 border-2 border-background shadow-sm">
+            <AvatarImage src={user.avatar ?? ""} />
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
 
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold">{fullName}</h1>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+          <div>
+            <h1 className="text-3xl font-bold">{fullName}</h1>
 
-              <div className="flex items-center gap-3">
-                <Badge variant={user.is_deactivate ? "secondary" : "default"}>
-                  {user.is_deactivate ? "Inactive" : "Active"}
-                </Badge>
-                {/* <span className="text-sm text-muted-foreground">
-                  UID: {user.user_uid}
-                </span> */}
-              </div>
+            <div className="text-sm text-muted-foreground flex gap-3 flex-wrap">
+              <span className="flex items-center gap-1">
+                <Mail className="h-3 w-3" /> {user.email}
+              </span>
+
+              <span className="flex items-center gap-1">
+                <UserIcon className="h-3 w-3" /> {user.role}
+              </span>
+
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> Joined{" "}
+                {safeDate(user.registered_at)}
+              </span>
             </div>
+
+            <Badge
+              variant={user.is_deactivate ? "destructive" : "outline"}
+              className="mt-2"
+            >
+              {user.is_deactivate ? "Inactive" : "Active"}
+            </Badge>
           </div>
+        </div>
 
-          {/* ===== CONFIRMATION MODAL ===== */}
-          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <AlertDialogTrigger asChild>
-              {user.is_deactivate ? (
-                <Button variant="outline">Reactivate</Button>
-              ) : (
-                <Button variant="destructive">Deactivate</Button>
-              )}
-            </AlertDialogTrigger>
+        {/* ACTION */}
+        {/* <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant={user.is_deactivate ? "default" : "destructive"}
+            >
+              {user.is_deactivate ? "Reactivate" : "Deactivate"}
+            </Button>
+          </AlertDialogTrigger>
 
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {user.is_deactivate
-                    ? "Reactivate User?"
-                    : "Deactivate User?"}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {user.is_deactivate
-                    ? "This will restore the user's access to the platform."
-                    : "This will disable the user's access to the platform. You can reactivate the user later."}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {user.is_deactivate ? "Reactivate User?" : "Deactivate User?"}
+              </AlertDialogTitle>
 
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={actionLoading}>
-                  Cancel
-                </AlertDialogCancel>
+              <AlertDialogDescription>
+                This action will update user access.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
-                <AlertDialogAction
-                  disabled={actionLoading}
-                  onClick={async () => {
-                    if (user.is_deactivate) {
-                      await handleReactivate();
-                    } else {
-                      await handleDeactivate();
-                    }
-                    setConfirmOpen(false);
-                  }}
-                  className={
-                    user.is_deactivate
-                      ? ""
-                      : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  }
-                >
-                  {actionLoading
-                    ? "Processing..."
-                    : user.is_deactivate
-                    ? "Reactivate"
-                    : "Deactivate"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={actionLoading}>
+                Cancel
+              </AlertDialogCancel>
 
-      {/* ===== USER STATS ===== */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Spent Amount" value={`$${user.spent_amount}`} />
-        <StatCard label="Training Plans" value={user.training_plans.total} />
-        <StatCard label="Orders" value={user.orders.total} />
+              <AlertDialogAction
+                disabled={actionLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleToggleStatus();
+                }}
+              >
+                {actionLoading ? "Processing..." : "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog> */}
       </div>
 
-      {/* ===== TABS ===== */}
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Total Collections"
+          value={user.collections?.total_items ?? 0}
+        />
+        <StatCard
+          label="Sessions Logged"
+          value={user.sessions?.total ?? 0}
+        />
+        <StatCard
+          label="Total Orders"
+          value={user.orders?.length ?? 0}
+        />
+      </div>
+
+      {/* TABS */}
       <Tabs defaultValue="plans">
-        <TabsList>
-          <TabsTrigger value="plans">Training Plans</TabsTrigger>
+        <TabsList className="grid grid-cols-3 w-full">
+          <TabsTrigger value="plans">Collections</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="plans">
-          <DataTable 
-            empty="No training plans found."
-            headers={["Title", "Exercises", "Level", "Action"]}
-            rows={user.training_plans.data.map((p) => [
-              p.title,
-              p.total_exercises,
-    p.level.charAt(0).toUpperCase() + p.level.slice(1),
-              <button
+        {/* COLLECTIONS */}
+        <TabsContent value="plans" className="mt-6">
+          <DataTable
+            empty="No collections found."
+            headers={["Title", "Exercises", "Level", "Created", "Action"]}
+            rows={(user.collections?.data ?? []).map((p) => [
+              p.title ?? "N/A",
+              p.exercise_count ?? 0,
+              <Badge key={p.id} variant="secondary">
+                {p.level ?? "N/A"}
+              </Badge>,
+              safeDate(p.created_at),
+              <Button
                 key={p.id}
-                className="p-1 rounded hover:bg-muted/40"
+                variant="ghost"
+                size="icon"
                 onClick={() =>
                   router.push(
-                    `/dashboard/users/plans/${p.id}?userId=${user.user_uid}`
+                    `/dashboard/users/plans/${p.id}?userId=${user.id}`
                   )
                 }
               >
-                <Eye className="h-5 w-5 text-primary" />
-              </button>,
+                <Eye className="h-4 w-4" />
+              </Button>,
             ])}
           />
         </TabsContent>
 
-        <TabsContent value="sessions">
+        {/* SESSIONS */}
+        <TabsContent value="sessions" className="mt-6">
           <DataTable
             empty="No sessions found."
-            headers={["Title", "Start Date", "End Date", "Action"]}
-            rows={user.sessions.data.map((s) => [
-              s.title,
-              s.start_date,
-              s.end_date,
-              <button
+            headers={["Title", "Start", "End", "Action"]}
+            rows={(user.sessions?.data ?? []).map((s) => [
+              s.title ?? "N/A",
+              safeDate(s.start_date),
+              safeDate(s.end_date),
+              <Button
                 key={s.id}
-                className="p-1 rounded hover:bg-muted/40"
+                variant="ghost"
+                size="icon"
                 onClick={() =>
                   router.push(
-                    `/dashboard/users/sessions/${s.id}?userId=${user.user_uid}`
+                    `/dashboard/users/sessions/${s.id}?userId=${user.id}`
                   )
                 }
               >
-                <Eye className="h-5 w-5 text-primary" />
-              </button>,
+                <Eye className="h-4 w-4" />
+              </Button>,
             ])}
           />
         </TabsContent>
 
-        <TabsContent value="orders">
+        {/* ORDERS */}
+        <TabsContent value="orders" className="mt-6">
           <DataTable
             empty="No orders found."
-            headers={["Items", "Status", "Amount", "Action"]}
-            rows={user.orders.data.map((o) => [
-              o.total_items,
-              o.status,
-              `$${o.total_amount}`,
-              <button
+            headers={["Order ID", "Date", "Status", "Amount", "Action"]}
+            rows={(user.orders ?? []).map((o) => [
+              `#${o.id}`,
+              safeDate(o.ordered_date),
+              <Badge key={o.id} className="capitalize">
+                {o.status ?? "N/A"}
+              </Badge>,
+              <span key={o.id}>${o.total_amount ?? "0"}</span>,
+              <Button
                 key={o.id}
-                className="p-1 rounded hover:bg-muted/40"
+                variant="ghost"
+                size="icon"
                 onClick={() =>
                   router.push(
-                    `/dashboard/users/orders/${o.id}?userId=${user.user_uid}`
+                    `/dashboard/users/orders/${o.id}?userId=${user.id}`
                   )
                 }
               >
-                <Eye className="h-5 w-5 text-primary" />
-              </button>,
+                <Eye className="h-4 w-4" />
+              </Button>,
             ])}
           />
         </TabsContent>
@@ -344,12 +404,18 @@ export default function UserDetailsPage() {
   );
 }
 
-/* ================= REUSABLE COMPONENTS ================= */
+/* ================= REUSABLE ================= */
 
-function StatCard({ label, value }: { label: string; value: any }) {
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="p-6">
         <p className="text-sm text-muted-foreground">{label}</p>
         <p className="text-2xl font-bold">{value}</p>
       </CardContent>
@@ -366,10 +432,10 @@ function DataTable({
   rows: any[][];
   empty: string;
 }) {
-  if (!rows.length) {
+  if (!rows || rows.length === 0) {
     return (
       <Card>
-        <CardContent className="pt-6 text-muted-foreground">
+        <CardContent className="py-10 text-center text-muted-foreground">
           {empty}
         </CardContent>
       </Card>
@@ -386,11 +452,12 @@ function DataTable({
             ))}
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {rows.map((row, i) => (
             <TableRow key={i}>
               {row.map((cell, j) => (
-                <TableCell key={j}>{cell}</TableCell>
+                <TableCell key={j}>{cell ?? "N/A"}</TableCell>
               ))}
             </TableRow>
           ))}
