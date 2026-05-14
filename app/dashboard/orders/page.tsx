@@ -54,12 +54,16 @@ interface Order {
   order_items: OrderItem[];
 }
 
+const PER_PAGE = 10;
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
+
+  // controls next button
+  const [hasMore, setHasMore] = useState(false);
 
   const [open, setOpen] = useState(false);
 
@@ -78,26 +82,31 @@ export default function OrdersPage() {
       setLoading(true);
 
       const res = await API.get(
-        `/admin/orders?per_page=20&page=${page}`
+        `/admin/orders?per_page=${PER_PAGE}&page=${page}`
       );
 
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.data || [];
+      const responseData = res.data;
+
+      const data = Array.isArray(responseData)
+        ? responseData
+        : responseData.data || [];
 
       setOrders(data);
 
-      setCurrentPage(res.data.current_page || 1);
-      setLastPage(res.data.last_page || 1);
+      setCurrentPage(page);
+
+      // show next button only if current page returned 10 items
+      setHasMore(data.length === PER_PAGE);
     } catch (error) {
       console.error("Failed to fetch orders", error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(1);
   }, []);
 
   // FETCH ORDER DETAILS
@@ -176,7 +185,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto  space-y-6">
 
       {/* HEADER */}
       <div className="flex items-center justify-between">
@@ -283,7 +292,7 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between">
 
         <p className="text-sm text-muted-foreground">
-          Page {currentPage} of {lastPage}
+          Page {currentPage}
         </p>
 
         <div className="flex gap-2">
@@ -291,7 +300,7 @@ export default function OrdersPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={currentPage === 1}
+            disabled={currentPage === 1 || loading}
             onClick={() =>
               fetchOrders(currentPage - 1)
             }
@@ -303,7 +312,7 @@ export default function OrdersPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={currentPage === lastPage}
+            disabled={!hasMore || loading}
             onClick={() =>
               fetchOrders(currentPage + 1)
             }

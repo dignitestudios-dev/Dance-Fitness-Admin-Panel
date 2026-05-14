@@ -42,6 +42,12 @@ export interface TrainingPlan {
   description: string;
   cover_image: string | null;
   exercises: TrainingPlanExercise[];
+    image?: string;
+  exercise_count: number;
+ is_saved?: boolean;
+  created_at?: string;
+    tags?: string[];
+
 }
 
 export interface TrainingPlanPagination {

@@ -196,66 +196,83 @@ export default function TrainingPlanCard({
 
   return (
     <>
-     <Card className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white group">
-  {/* Cover Image */}
-  {plan.cover_image && (
-    <div
-      className="relative aspect-video w-full overflow-hidden cursor-pointer bg-slate-100"
-      onClick={onClick}
-    >
-      <img
-        src={plan.cover_image}
-        alt={plan.title}
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
+ <Card className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white group">
+  {/* Thumbnail */}
+  <div
+    className="relative aspect-video w-full overflow-hidden cursor-pointer bg-slate-100"
+    onClick={onClick}
+  >
+    <img
+      src={
+        plan.image ||
+        "https://placehold.co/600x400?text=No+Image"
+      }
+      alt={plan.title}
+      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+      onError={(e) => {
+        (
+          e.currentTarget as HTMLImageElement
+        ).src =
+          "https://placehold.co/600x400?text=No+Image";
+      }}
+    />
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300" />
+    {/* Overlay */}
+    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300" />
 
-      {/* View Button */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-          <Eye className="h-4 w-4" />
-          <span className="text-sm font-medium">
-            View Plan
-          </span>
-        </div>
+    {/* Hover Button */}
+    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      <div className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+        <Eye className="h-4 w-4" />
+
+        <span className="text-sm font-medium">
+          View Plan
+        </span>
       </div>
     </div>
-  )}
+
+    {/* Exercise Count */}
+    <div className="absolute top-3 right-3">
+      <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full">
+        {plan.exercise_count || 0} Exercises
+      </div>
+    </div>
+  </div>
 
   {/* Content */}
   <CardContent className="p-4">
     {/* Title */}
     <h2
-      className="font-bold text-sm leading-tight line-clamp-2 h-10 mb-3 text-slate-800 cursor-pointer"
+      className="font-bold text-sm leading-tight line-clamp-2 min-h-[40px] mb-3 text-slate-800 cursor-pointer"
       onClick={onClick}
     >
       {plan.title}
     </h2>
 
     {/* Meta */}
-    <div className="flex items-center gap-2 mb-4">
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
       <span className="bg-[#D32C86] text-white text-[10px] px-2 py-1 rounded-full font-medium">
         {plan.level}
       </span>
 
       <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-        {plan.exercises?.length || 0} Exercises
+        {plan.exercise_count || 0} Exercises
       </span>
     </div>
 
     {/* Categories */}
     {plan.categories?.length > 0 && (
       <div className="flex flex-wrap gap-1 mb-4">
-        {plan.categories.slice(0, 3).map((cat) => (
-          <span
-            key={cat}
-            className="text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-600"
-          >
-            {cat}
-          </span>
-        ))}
+        {plan.categories
+          .slice(0, 3)
+          .map((cat) => (
+            <span
+              key={cat}
+              className="text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-600"
+            >
+              {cat}
+            </span>
+          ))}
       </div>
     )}
 

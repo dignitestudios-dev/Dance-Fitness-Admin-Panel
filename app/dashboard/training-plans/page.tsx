@@ -27,21 +27,21 @@ export default function TrainingPlansPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(12);
   const [hasMore, setHasMore] = useState(false);
 
   const fetchTrainingPlans = async (page: number = 1, refresh: boolean = false) => {
     setLoading(true);
     try {
       const res = await API.get("/admin/training-plans", {
-        params: { page, refresh },
+        params: { page, refresh , per_page: perPage },
       });
 
       const data = res.data;
       setTrainingPlans(data.data || []);
       setCurrentPage(data.current_page || 1);
       setTotalPages(data.total_pages || 1);
-      setPerPage(data.per_page || 10);
+      setPerPage(data.per_page || 12);
       setHasMore(data.has_more || false);
 
       if (refresh) {

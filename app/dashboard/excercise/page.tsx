@@ -312,69 +312,48 @@ export default function ExercisesPage() {
     );
 
   // FETCH EXERCISES
-  const fetchExercises =
-    async (
-      page: number = 1,
-      refresh: boolean = true
-    ) => {
-      setLoading(true);
+ const fetchExercises = async (
+  page: number = 1,
+  refresh: boolean = true
+) => {
+  setLoading(true);
 
-      try {
-        const res =
-          await API.get(
-            "/admin/exercises",
-            {
-              params: {
-                page,
-                refresh,
-              },
-            }
-          );
+  try {
+    const res = await API.get("/admin/exercises", {
+      params: {
+        page,
+        per_page: 12, // ✅ ADD THIS
+        refresh,
+      },
+    });
 
-        const {
-          regular,
-          ondemand,
-        } = res.data;
+    const { regular, ondemand } = res.data;
 
-        // Regular
-        setRegularExercises(
-          normalizeData(
-            regular.data
-          )
-        );
+    // Regular
+    setRegularExercises(normalizeData(regular.data));
 
-        setPaginationRegular({
-          ...regular,
-          last_page:
-            regular.total_pages,
-        });
+    setPaginationRegular({
+      ...regular,
+      last_page: regular.total_pages,
+    });
 
-        // Ondemand
-        setOndemandExercises(
-          normalizeData(
-            ondemand.data
-          )
-        );
+    // Ondemand
+    setOndemandExercises(normalizeData(ondemand.data));
 
-        setPaginationOndemand({
-          ...ondemand,
-          last_page:
-            ondemand.total_pages,
-        });
+    setPaginationOndemand({
+      ...ondemand,
+      last_page: ondemand.total_pages,
+    });
 
-        if (refresh) {
-          toast.success(
-            "Exercises refreshed successfully"
-          );
-        }
-      } catch (err) {
-        toast.error(
-          "Failed to sync data"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (refresh) {
+      toast.success("Exercises refreshed successfully");
+    }
+  } catch (err) {
+    toast.error("Failed to sync data");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // FETCH TRAINING PLANS
   // const fetchTrainingPlans =
