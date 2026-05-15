@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, ChevronDown } from "lucide-react";
 
 import {
   Dialog,
@@ -25,6 +25,12 @@ import {
 
 import { Checkbox } from "@/components/ui/checkbox";
 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { API } from "@/lib/api/axios";
 import { toast } from "sonner";
 
@@ -38,6 +44,11 @@ interface AddTrainingPlanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+}
+
+interface Exercise {
+  id: number;
+  title: string;
 }
 
 export default function AddTrainingPlanDialog({
@@ -55,9 +66,29 @@ export default function AddTrainingPlanDialog({
   const [level, setLevel] = useState("");
 
   const [exerciseIds, setExerciseIds] = useState<number[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loadingExercises, setLoadingExercises] = useState(false);
 
   const [showOnSite, setShowOnSite] = useState(true);
-  const [exerciseIdsInput, setExerciseIdsInput] = useState("");
+
+  useEffect(() => {
+    const fetchExercises = async () => {
+      try {
+        setLoadingExercises(true);
+
+        const res = await API.get("/admin/exercise/list");
+
+        setExercises(res.data.data || []);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch exercises");
+      } finally {
+        setLoadingExercises(false);
+      }
+    };
+
+    fetchExercises();
+  }, []);
 
   const resetForm = () => {
     setTitle("");
@@ -68,70 +99,73 @@ export default function AddTrainingPlanDialog({
     setExerciseIds([]);
     setShowOnSite(true);
   };
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
 
-  if (
-    !title ||
-    !description ||
-    !level ||
-    categories.length === 0 ||
-    tags.length === 0
-  ) {
-    toast.error("Please fill all required fields");
-    return;
-  }
-
-  setSubmitting(true);
-
-  try {
-    const formData = new FormData();
-
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("level", level);
-    formData.append("show_on_site", String(showOnSite));
-
-    categories.forEach((c) =>
-      formData.append("categories[]", c)
+  const handleExerciseToggle = (id: number) => {
+    setExerciseIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
     );
+  };
 
-    tags.forEach((t) =>
-      formData.append("tags[]", t)
-    );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    // ✅ FIX: convert input → array here
-    const parsedExerciseIds = exerciseIdsInput
-      .split(",")
-      .map((id) => Number(id.trim()))
-      .filter((id) => !isNaN(id) && id > 0);
+    if (
+      !title ||
+      !description ||
+      !level ||
+      categories.length === 0 ||
+      tags.length === 0
+    ) {
+      toast.error("Please fill all required fields");
+      return;
+    }
 
-    parsedExerciseIds.forEach((id) =>
-      formData.append("exercises[]", String(id))
-    );
+    setSubmitting(true);
 
-    await API.post(
-      "/admin/training-plans/create",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    try {
+      const formData = new FormData();
 
-    toast.success("Training plan created!");
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("level", level);
+      formData.append("show_on_site", String(showOnSite));
 
-    resetForm();
-    onOpenChange(false);
-    onSuccess();
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to create training plan");
-  } finally {
-    setSubmitting(false);
-  }
-};
+      categories.forEach((c) =>
+        formData.append("categories[]", c)
+      );
+
+      tags.forEach((t) =>
+        formData.append("tags[]", t)
+      );
+
+      exerciseIds.forEach((id) =>
+        formData.append("exercises[]", String(id))
+      );
+
+      await API.post(
+        "/admin/training-plans/create",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      toast.success("Training plan created!");
+
+      resetForm();
+      onOpenChange(false);
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create training plan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,8 +196,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             onChange={(e) => setDescription(e.target.value)}
           />
 
-
-          {/* CATEGORY (IDENTICAL TO EXERCISE MODAL) */}
+          {/* CATEGORY */}
           <CategorySelector
             categories={ALL_CATEGORIES}
             selectedCategories={categories}
@@ -172,7 +205,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             }
           />
 
-          {/* TAGS (IDENTICAL COMPONENT) */}
+          {/* TAGS */}
           <TagSelector
             tags={ALL_TAGS}
             selectedTags={tags}
@@ -181,37 +214,86 @@ const handleSubmit = async (e: React.FormEvent) => {
             }
           />
 
-          {/* EXERCISE IDS (same style as Video ID) */}
-<div>
-  <div className="text-sm font-medium mb-2">
-    Exercise IDs
-  </div>
+          {/* EXERCISE DROPDOWN */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Select Exercises
+            </label>
 
-  <Input
-    placeholder="e.g. 12, 45, 78"
-    value={exerciseIdsInput}
-    onChange={(e) => setExerciseIdsInput(e.target.value)}
-  />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="w-full justify-between"
+                >
+                  {exerciseIds.length > 0
+                    ? `${exerciseIds.length} exercise(s) selected`
+                    : "Choose exercises"}
 
-  <p className="text-xs text-muted-foreground mt-1">
-    Enter comma-separated exercise IDs (same style as Video ID input)
-  </p>
-</div>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
 
-          {/* LEVEL (IDENTICAL STYLE) */}
-         <Select value={level} onValueChange={setLevel}>
-  <SelectTrigger className="w-full">
-    <SelectValue placeholder="Select Level" />
-  </SelectTrigger>
+              <PopoverContent
+                className="w-[350px] p-3"
+                align="start"
+              >
+                <div className="max-h-60 overflow-y-auto space-y-3">
+                  {loadingExercises ? (
+                    <p className="text-sm text-muted-foreground">
+                      Loading exercises...
+                    </p>
+                  ) : exercises.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No exercises found
+                    </p>
+                  ) : (
+                    exercises.map((exercise) => (
+                      <div
+                        key={exercise.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          checked={exerciseIds.includes(
+                            exercise.id
+                          )}
+                          onCheckedChange={() =>
+                            handleExerciseToggle(exercise.id)
+                          }
+                        />
 
-  <SelectContent>
-    {LEVELS.map((lvl) => (
-      <SelectItem key={lvl} value={lvl}>
-        {lvl}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                        <label className="text-sm cursor-pointer">
+                          {exercise.title}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {exerciseIds.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                Selected IDs: {exerciseIds.join(", ")}
+              </div>
+            )}
+          </div>
+
+          {/* LEVEL */}
+          <Select value={level} onValueChange={setLevel}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Level" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {LEVELS.map((lvl) => (
+                <SelectItem key={lvl} value={lvl}>
+                  {lvl}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* SHOW ON SITE */}
           <div className="flex items-center justify-between rounded-md border p-3">

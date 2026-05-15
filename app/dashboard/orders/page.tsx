@@ -34,6 +34,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
 interface OrderItem {
   id: number;
   product_id: number;
@@ -62,7 +68,6 @@ export default function OrdersPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // controls next button
   const [hasMore, setHasMore] = useState(false);
 
   const [open, setOpen] = useState(false);
@@ -76,13 +81,20 @@ export default function OrdersPage() {
   const [markingComplete, setMarkingComplete] =
     useState(false);
 
+  // ACTIVE STATUS TAB
+  const [status, setStatus] =
+    useState("completed");
+
   // FETCH ORDERS
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (
+    page = 1,
+    orderStatus = status
+  ) => {
     try {
       setLoading(true);
 
       const res = await API.get(
-        `/admin/orders?per_page=${PER_PAGE}&page=${page}`
+        `/admin/orders?per_page=${PER_PAGE}&page=${page}&status=${orderStatus}`
       );
 
       const responseData = res.data;
@@ -95,7 +107,6 @@ export default function OrdersPage() {
 
       setCurrentPage(page);
 
-      // show next button only if current page returned 10 items
       setHasMore(data.length === PER_PAGE);
     } catch (error) {
       console.error("Failed to fetch orders", error);
@@ -106,20 +117,27 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    fetchOrders(1);
-  }, []);
+    fetchOrders(1, status);
+  }, [status]);
 
   // FETCH ORDER DETAILS
-  const fetchOrderDetails = async (orderId: number) => {
+  const fetchOrderDetails = async (
+    orderId: number
+  ) => {
     try {
       setDetailsLoading(true);
       setOpen(true);
 
-      const res = await API.get(`/admin/orders/${orderId}`);
+      const res = await API.get(
+        `/admin/orders/${orderId}`
+      );
 
       setSelectedOrder(res.data);
     } catch (error) {
-      console.error("Failed to fetch order details", error);
+      console.error(
+        "Failed to fetch order details",
+        error
+      );
     } finally {
       setDetailsLoading(false);
     }
@@ -132,26 +150,35 @@ export default function OrdersPage() {
     try {
       setMarkingComplete(true);
 
-      await API.post(`/admin/orders/${selectedOrder.id}`, {
-        status: "completed",
-      });
+      await API.post(
+        `/admin/orders/${selectedOrder.id}`,
+        {
+          status: "completed",
+        }
+      );
 
-      // update modal data
+      // update modal
       setSelectedOrder({
         ...selectedOrder,
         status: "completed",
       });
 
-      // update table data
+      // update table
       setOrders((prev) =>
         prev.map((order) =>
           order.id === selectedOrder.id
-            ? { ...order, status: "completed" }
+            ? {
+                ...order,
+                status: "completed",
+              }
             : order
         )
       );
     } catch (error) {
-      console.error("Failed to mark order complete", error);
+      console.error(
+        "Failed to mark order complete",
+        error
+      );
     } finally {
       setMarkingComplete(false);
     }
@@ -185,7 +212,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto  space-y-6">
+    <div className="container mx-auto space-y-6">
 
       {/* HEADER */}
       <div className="flex items-center justify-between">
@@ -199,10 +226,37 @@ export default function OrdersPage() {
           </p>
         </div>
 
-        <Badge variant="outline">
+        {/* <Badge variant="outline">
           {orders.length} Orders
-        </Badge>
+        </Badge> */}
       </div>
+
+      {/* STATUS TABS */}
+      <Tabs
+        value={status}
+        onValueChange={(value) => {
+          setStatus(value);
+          setCurrentPage(1);
+        }}
+      >
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="completed">
+            Completed
+          </TabsTrigger>
+
+          <TabsTrigger value="processing">
+            Processing
+          </TabsTrigger>
+
+          <TabsTrigger value="pending">
+            Pending
+          </TabsTrigger>
+
+          <TabsTrigger value="failed">
+            Failed
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* TABLE */}
       <Card>
@@ -242,7 +296,9 @@ export default function OrdersPage() {
 
                     <TableCell>
                       <Badge
-                        variant={getStatusColor(order.status)}
+                        variant={getStatusColor(
+                          order.status
+                        )}
                         className="capitalize"
                       >
                         {order.status}
@@ -251,9 +307,9 @@ export default function OrdersPage() {
 
                     <TableCell>
                       $
-                      {Number(order.total_amount).toFixed(
-                        2
-                      )}
+                      {Number(
+                        order.total_amount
+                      ).toFixed(2)}
                     </TableCell>
 
                     <TableCell>
@@ -302,7 +358,10 @@ export default function OrdersPage() {
             size="sm"
             disabled={currentPage === 1 || loading}
             onClick={() =>
-              fetchOrders(currentPage - 1)
+              fetchOrders(
+                currentPage - 1,
+                status
+              )
             }
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
@@ -314,7 +373,10 @@ export default function OrdersPage() {
             size="sm"
             disabled={!hasMore || loading}
             onClick={() =>
-              fetchOrders(currentPage + 1)
+              fetchOrders(
+                currentPage + 1,
+                status
+              )
             }
           >
             Next
@@ -419,7 +481,9 @@ export default function OrdersPage() {
                   </div>
 
                   <p>
-                    {selectedOrder.delivery_charges}
+                    {
+                      selectedOrder.delivery_charges
+                    }
                   </p>
                 </div>
 
